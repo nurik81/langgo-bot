@@ -353,32 +353,38 @@ Thread(target=run_web).start()
 # =====================
 
 async def main():
+    # Botni yaratish
+    application = ApplicationBuilder().token(TOKEN).build()
 
-    app = ApplicationBuilder().token(TOKEN).build()
+    # Handlerlarni qo'shish
+    application.add_handler(CommandHandler("start", start))
+    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
 
-    app.add_handler(CommandHandler("start", start))
+    # Job queue (agar kerak bo'lsa)
+    if application.job_queue:
+        application.job_queue.run_daily(send_report, time=time(hour=17, minute=0))
 
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            handle
-        )
-    )
-
-    app.job_queue.run_daily(
-        send_report,
-        time=time(hour=17, minute=0)
-    )
-    print("🚀 BOT READY 24/7")
-
-    await app.initialize()
-    await app.start()
-    await app.updater.start_polling()
+    print("🚀 Bot ishga tushishga tayyor...")
     
-    # Bot to'xtab qolmasligi uchun kutish buyrug'i
-    await asyncio.Event().wait()
+    # Botni yurgizish (polling rejimida)
+    async with application:
+        await application.initialize()
+        await application.start()
+        await application.updater.start_polling()
+        print("✅ Bot hozir ishlayapti!")
+        await asyncio.Event().wait()
 
 if __name__ == '__main__':
+    # Render o'chib qolmasligi uchun Flaskni alohida oqimda yurgizish
+    from threading import Thread
+    flask_thread = Thread(target=lambda: app_web.run(host='0.0.0.0', port=10000))
+    flask_thread.daemon = True
+    flask_thread.start()
+
+    # Asosiy bot funksiyasini yurgizish
     import asyncio
-    asyncio.run(main())
+    try:
+        asyncio.run(main())
+    except (KeyboardInterrupt, SystemExit):
+        pass
 
