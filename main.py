@@ -1,4 +1,5 @@
 import os
+import asyncio
 import pandas as pd
 from datetime import time
 from flask import Flask
@@ -17,7 +18,7 @@ from telegram.ext import (
 # TOKEN
 # =====================
 
-TOKEN = "8649876958:AAHKbTjEOS8t2nobEBB3knFNdkWDNZLvjkg"
+TOKEN = "8649876958:AAG6mteGlGQPDzQ6sSE3yBUMMyGY_Dntvec"
 
 # =====================
 # 🇩🇪 GERMAN WORDS
@@ -94,7 +95,7 @@ de_data = [
 ["orzu","Traum","der","Träume"]
 ]
 
-while len(de_data) < 130:
+while len(de_data) < 200:
     i = len(de_data) + 1
     de_data.append([f"so‘z{i}", f"Wort{i}", "das", "-"])
 
@@ -171,12 +172,23 @@ en_data = [
 ["orzu","dream"]
 ]
 
-while len(en_data) < 130:
+while len(en_data) < 200:
     i = len(en_data) + 1
     en_data.append([f"so‘z{i}", f"word{i}"])
 
-de_df = pd.DataFrame(de_data, columns=["uz","ger","article","plural"])
-en_df = pd.DataFrame(en_data, columns=["uz","en"])
+# =====================
+# DATAFRAME
+# =====================
+
+de_df = pd.DataFrame(
+    de_data,
+    columns=["uz","ger","article","plural"]
+)
+
+en_df = pd.DataFrame(
+    en_data,
+    columns=["uz","en"]
+)
 
 # =====================
 # MEMORY
@@ -193,15 +205,17 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     uid = update.message.chat_id
 
-    stats.setdefault(uid, {"de":0,"en":0})
+    stats.setdefault(uid, {"de":0, "en":0})
 
-    keyboard = [["🇩🇪 Nemis tili","🇬🇧 English"]]
+    keyboard = [
+        ["🇩🇪 Nemis tili", "🇬🇧 English"]
+    ]
 
     await update.message.reply_text(
         "👋 Assalomu alaykum!\n\n"
         "🌟 LangGo Botga xush kelibsiz.\n"
         "📚 Nemis va ingliz tilini birga o‘rganamiz.\n\n"
-        "🚀 Tilni tanlang 🙂",
+        "🚀 O‘rganmoqchi bo‘lgan tilingizni tanlang 🙂",
         reply_markup=ReplyKeyboardMarkup(
             keyboard,
             resize_keyboard=True
@@ -209,7 +223,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # =====================
-# REPORT
+# DAILY REPORT
 # =====================
 
 async def send_report(context):
@@ -260,22 +274,28 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     stats.setdefault(uid, {"de":0,"en":0})
 
+    # 🇩🇪
     if "nemis" in text:
 
         user_lang[uid] = "de"
 
         await update.message.reply_text(
-            "🇩🇪 Nemis tili tanlandi 🙂"
+            "🇩🇪 Nemis tili tanlandi 🙂\n\n"
+            "📚 Nemis tilini o‘rganishda sizga omad tilaymiz!\n"
+            "✨ Endi so‘z yuboring."
         )
 
         return
 
+    # 🇬🇧
     if "english" in text:
 
         user_lang[uid] = "en"
 
         await update.message.reply_text(
-            "🇬🇧 English selected 🙂"
+            "🇬🇧 English selected 🙂\n\n"
+            "📚 We wish you success in learning English!\n"
+            "✨ Send a word."
         )
 
         return
@@ -283,9 +303,14 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
     lang = user_lang.get(uid)
 
     if not lang:
+
         return await update.message.reply_text(
             "🙂 Avval til tanlang."
         )
+
+    # =====================
+    # GERMAN
+    # =====================
 
     if lang == "de":
 
@@ -301,15 +326,20 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             stats[uid]["de"] += 1
 
             return await update.message.reply_text(
-                f"📘 {r['ger']}\n"
-                f"📌 {r['article']}\n"
-                f"📚 {r['plural']}\n"
-                f"🇺🇿 {r['uz']}"
+                f"📘 Nemischa: {r['ger']}\n"
+                f"📌 Artikl: {r['article']}\n"
+                f"📚 Plural: {r['plural']}\n"
+                f"🇺🇿 Tarjimasi: {r['uz']}\n\n"
+                f"🌟 Davom eting!"
             )
 
         return await update.message.reply_text(
-            "😔 Bu so‘z topilmadi."
+            "😔 Kechirasiz, bu so‘z bazada topilmadi."
         )
+
+    # =====================
+    # ENGLISH
+    # =====================
 
     if lang == "en":
 
@@ -325,66 +355,72 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             stats[uid]["en"] += 1
 
             return await update.message.reply_text(
-                f"📘 {r['en']}\n"
-                f"🇺🇿 {r['uz']}"
+                f"📘 English: {r['en']}\n"
+                f"🇺🇿 Uzbek: {r['uz']}\n\n"
+                f"🌟 Keep going!"
             )
 
         return await update.message.reply_text(
-            "😔 Word not found."
+            "😔 Sorry, this word was not found."
         )
 
 # =====================
 # WEB SERVER
 # =====================
 
-app_web = Flask('')
+app_web = Flask(__name__)
 
 @app_web.route('/')
 def home():
-    return "LangGo Bot ishlayapti!"
+    return "LangGo Bot ishlayapti 🚀"
 
 def run_web():
-    app_web.run(host='0.0.0.0', port=10000)
-
-Thread(target=run_web).start()
+    port = int(os.environ.get("PORT", 10000))
+    app_web.run(host='0.0.0.0', port=port)
 
 # =====================
-# RUN
+# RUN BOT
 # =====================
 
 async def main():
-    # Botni yaratish
-    application = ApplicationBuilder().token(TOKEN).build()
 
-    # Handlerlarni qo'shish
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
+    application = (
+        ApplicationBuilder()
+        .token(TOKEN)
+        .build()
+    )
 
-    # Job queue (agar kerak bo'lsa)
+    application.add_handler(
+        CommandHandler("start", start)
+    )
+
+    application.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            handle
+        )
+    )
+
     if application.job_queue:
-        application.job_queue.run_daily(send_report, time=time(hour=17, minute=0))
+        application.job_queue.run_daily(
+            send_report,
+            time=time(hour=17, minute=0)
+        )
 
-    print("🚀 Bot ishga tushishga tayyor...")
-    
-    # Botni yurgizish (polling rejimida)
-    async with application:
-        await application.initialize()
-        await application.start()
-        await application.updater.start_polling()
-        print("✅ Bot hozir ishlayapti!")
-        await asyncio.Event().wait()
+    print("🚀 Bot ishlayapti...")
 
-if __name__ == '__main__':
-    # Render o'chib qolmasligi uchun Flaskni alohida oqimda yurgizish
-    from threading import Thread
-    flask_thread = Thread(target=lambda: app_web.run(host='0.0.0.0', port=10000))
-    flask_thread.daemon = True
-    flask_thread.start()
+    await application.initialize()
+    await application.start()
+    await application.updater.start_polling()
 
-    # Asosiy bot funksiyasini yurgizish
-    import asyncio
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        pass
+    await asyncio.Event().wait()
 
+# =====================
+# START SERVER + BOT
+# =====================
+
+if __name__ == "__main__":
+
+    Thread(target=run_web).start()
+
+    asyncio.run(main())
