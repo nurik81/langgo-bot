@@ -17,7 +17,7 @@ from telegram.ext import (
 # TOKEN
 # =====================
 
-TOKEN = os.getenv("BOT_TOKEN")
+TOKEN = "8649876958:AAHKbTjEOS8t2nobEBB3knFNdkWDNZLvjkg"
 
 # =====================
 # 🇩🇪 GERMAN WORDS
