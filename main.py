@@ -1,25 +1,26 @@
 import os
 from flask import Flask
 import threading
+import pandas as pd
+from datetime import time
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 app = Flask('')
+
 @app.route('/')
 def home():
     return "Bot is running!"
 
 def run():
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)))
+    port = int(os.environ.get('PORT', 10000))
+    app.run(host='0.0.0.0', port=port)
 
-threading.Thread(target=run).start()
-import os
-import pandas as pd
-from datetime import time
+# Flaskni alohida oqimda ishga tushirish
+threading.Thread(target=run, daemon=True).start()
 
-from telegram import Update, ReplyKeyboardMarkup
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, ContextTypes, filters
-
-# =====================
-# TOKEN (Render ENV)
+# Mana shu yerdan keyin TOKEN qismi boshlanadi
+TOKEN = os.getenv("BOT_TOKEN")
 # =====================
 TOKEN = os.getenv("BOT_TOKEN")
 
