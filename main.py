@@ -369,15 +369,16 @@ async def main():
         send_report,
         time=time(hour=17, minute=0)
     )
-
     print("🚀 BOT READY 24/7")
 
     await app.initialize()
     await app.start()
     await app.updater.start_polling()
+    
+    # Bot to'xtab qolmasligi uchun kutish buyrug'i
+    await asyncio.Event().wait()
 
-if __name__ == "__main__":
-
+if __name__ == '__main__':
     import asyncio
     asyncio.run(main())
-    await asyncio.Event().wait()
+
