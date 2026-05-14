@@ -57,7 +57,8 @@ de_data = [
     ["yengil", "leicht", "-", "-"]
 ]
     # --- UY JIOHOZLARI (Hausrat) ---
-    ["karovat", "Bett", "das", "Betten"], ["oyna (ko'zgu)", "Spiegel", "der", "Spiegel"],
+    ["karovat", "Bett", "das", "Betten"],
+    ["oyna", "Spiegel", "der", "Spiegel"],
     ["muzlatgich", "Kühlschrank", "der", "Kühlschränke"], ["gilam", "Teppich", "der", "Teppiche"],
     ["parda", "Vorhang", "der", "Vorhänge"], ["lampa", "Lampe", "die", "Lampen"],
     ["idish", "Geschirr", "das", "-"], ["qoshiq", "Löffel", "der", "Löffel"],
