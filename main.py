@@ -2,6 +2,8 @@ import os
 import asyncio
 import pandas as pd
 from datetime import time
+import pytz
+
 from flask import Flask
 from threading import Thread
 
@@ -18,13 +20,14 @@ from telegram.ext import (
 # TOKEN
 # =====================
 
-TOKEN = "8649876958:AAG6mteGlGQPDzQ6sSE3yBUMMyGY_Dntvec"
+TOKEN = "8649876958:AAFP4e95wQ45DUMySaQmBgCcXXJPTnF2Wmo"
 
 # =====================
 # 🇩🇪 GERMAN WORDS
 # =====================
 
 de_data = [
+
 ["kitob","Buch","das","Bücher"],
 ["stol","Tisch","der","Tische"],
 ["stul","Stuhl","der","Stühle"],
@@ -57,6 +60,26 @@ de_data = [
 ["do‘st","Freund","der","Freunde"],
 ["ota","Vater","der","Väter"],
 ["ona","Mutter","die","Mütter"],
+["aka","Bruder","der","Brüder"],
+["opa","Schwester","die","Schwestern"],
+["xola","Tante","die","Tanten"],
+["tog‘a","Onkel","der","Onkel"],
+["jiyan","Neffe","der","Neffen"],
+["qiz jiyan","Nichte","die","Nichten"],
+["o‘g‘il","Sohn","der","Söhne"],
+["qiz","Tochter","die","Töchter"],
+["o‘g‘il bola","Junge","der","Jungen"],
+["qiz bola","Mädchen","das","Mädchen"],
+["amma","Tante","die","Tanten"],
+["buvi","Großmutter","die","Großmütter"],
+["bobo","Großvater","der","Großväter"],
+["o‘qimoq","lernen","-","-"],
+["yozmoq","schreiben","-","-"],
+["gapirmoq","sprechen","-","-"],
+["eshitmoq","hören","-","-"],
+["ko‘rmoq","sehen","-","-"],
+["yemoq","essen","-","-"],
+["ichmoq","trinken","-","-"],
 ["pul","Geld","das","-"],
 ["vaqt","Zeit","die","-"],
 ["ish","Arbeit","die","-"],
@@ -93,6 +116,7 @@ de_data = [
 ["natija","Ergebnis","das","Ergebnisse"],
 ["maqsad","Ziel","das","Ziele"],
 ["orzu","Traum","der","Träume"]
+
 ]
 
 while len(de_data) < 200:
@@ -104,6 +128,7 @@ while len(de_data) < 200:
 # =====================
 
 en_data = [
+
 ["kitob","book"],
 ["stol","table"],
 ["stul","chair"],
@@ -135,7 +160,26 @@ en_data = [
 ["do‘st","friend"],
 ["ota","father"],
 ["ona","mother"],
-["bola","child"],
+["aka","brother"],
+["opa","sister"],
+["xola","aunt"],
+["tog‘a","uncle"],
+["jiyan","nephew"],
+["qiz jiyan","niece"],
+["o‘g‘il","son"],
+["qiz","daughter"],
+["o‘g‘il bola","boy"],
+["qiz bola","girl"],
+["amma","aunt"],
+["buvi","grandmother"],
+["bobo","grandfather"],
+["o‘qimoq","study"],
+["yozmoq","write"],
+["gapirmoq","speak"],
+["eshitmoq","hear"],
+["ko‘rmoq","see"],
+["yemoq","eat"],
+["ichmoq","drink"],
 ["erkak","man"],
 ["ayol","woman"],
 ["kalit","key"],
@@ -170,6 +214,7 @@ en_data = [
 ["natija","result"],
 ["maqsad","goal"],
 ["orzu","dream"]
+
 ]
 
 while len(en_data) < 200:
@@ -274,7 +319,6 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     stats.setdefault(uid, {"de":0,"en":0})
 
-    # 🇩🇪
     if "nemis" in text:
 
         user_lang[uid] = "de"
@@ -287,7 +331,6 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
-    # 🇬🇧
     if "english" in text:
 
         user_lang[uid] = "en"
@@ -308,9 +351,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🙂 Avval til tanlang."
         )
 
-    # =====================
-    # GERMAN
-    # =====================
+    # 🇩🇪 GERMAN
 
     if lang == "de":
 
@@ -337,9 +378,7 @@ async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "😔 Kechirasiz, bu so‘z bazada topilmadi."
         )
 
-    # =====================
-    # ENGLISH
-    # =====================
+    # 🇬🇧 ENGLISH
 
     if lang == "en":
 
@@ -401,10 +440,12 @@ async def main():
         )
     )
 
+    uz_tz = pytz.timezone("Asia/Tashkent")
+
     if application.job_queue:
         application.job_queue.run_daily(
             send_report,
-            time=time(hour=17, minute=0)
+            time=time(hour=22, minute=0, tzinfo=uz_tz)
         )
 
     print("🚀 Bot ishlayapti...")
