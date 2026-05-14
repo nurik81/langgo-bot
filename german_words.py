@@ -138,3 +138,43 @@ de_data = [
     ["issiq", "warm", "-", "-"], ["sovuq", "kalt", "-", "-"],
     ["nam", "nass", "-", "-"], ["quruq", "trocken", "-", "-"]
 ]
+    # --- ASOSIY OILA ---
+    ["ota-ona", "Eltern", "die", "-"],
+    ["farzandlar", "Kinder", "die", "-"],
+    ["egizaklar", "Zwillinge", "die", "-"],
+    ["er-xotin", "Ehepaar", "das", "Ehepaare"],
+    
+    # --- QARINDOSHLAR (Kengaytirilgan) ---
+    ["qaynona", "Schwiegermutter", "die", "Schwiegermütter"],
+    ["qaynota", "Schwiegervater", "der", "Schwiegerväter"],
+    ["kelin", "Schwiegertochter", "die", "Schwiegertöchter"],
+    ["kuyov", "Schwiegersohn", "der", "Schwiegersöhne"],
+    ["qayinaga / qayini", "Schwager", "der", "Schwäger"],
+    ["qayinsingil / qayniopa", "Schwägerin", "die", "Schwägerinnen"],
+    ["o'gay ota", "Stiefvater", "der", "Stiefväter"],
+    ["o'gay ona", "Stiefmutter", "die", "Stiefmütter"],
+    ["ajdodlar", "Vorfahren", "die", "-"],
+    ["avlodlar", "Nachkommen", "die", "-"],
+    ["qarindosh (ayol)", "Verwandte", "die", "Verwandten"],
+    ["qarindosh (erkak)", "Verwandter", "der", "Verwandten"]
+]
+    # --- KATTA AVLOD ---
+    ["bobo", "Großvater", "der", "Großväter"],
+    ["buvi", "Großmutter", "die", "Großmütter"],
+    ["katta bobo", "Urgroßvater", "der", "Urgroßväter"],
+    ["katta buvi", "Urgroßmutter", "die", "Urgroßmütter"],
+
+    # --- AMAKI, TOG‘A, AMMA, XOLA ---
+    ["amaki / tog‘a", "Onkel", "der", "Onkel"],
+    ["amma / xola", "Tante", "die", "Tanten"],
+    ["amakivachcha / tog‘avachcha (erkak)", "Cousin", "der", "Cousins"],
+    ["ammavachcha / xolavachcha (ayol)", "Cousine", "die", "Cousinen"],
+
+    # --- KELIN, KUYOV VA BOSHQA ---
+    ["kelinoyi / yanga", "Schwägerin", "die", "Schwägerinnen"],
+    ["pochcha", "Schwager", "der", "Schwäger"],
+    ["oila a'zosi", "Familienmitglied", "das", "Familienmitglieder"],
+    ["qarindoshlik", "Verwandtschaft", "die", "-"],
+    ["yetim", "Waise", "die", "Waisen"],
+    ["asrab olingan bola", "Adoptivkind", "das", "Adoptivkinder"]
+]
