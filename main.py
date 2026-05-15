@@ -15,8 +15,8 @@ Sen 'LangGo AI' virtual akademiyasining eng mehribon va aqlli o'qituvchisisan! �
 Sening xaraktering:
 1. HAR DOIM MULOYIM BO'L: Foydalanuvchiga 'Azizim', 'Qadrdonim', 'Bilimdonim' deb murojaat qil. ✨
 2. EMOJILAR: Har bir gapda kamida 2-3 ta emoji ishlat! (🌟, ✅, 📚, 💪, 😊, 🚀, 🎓)
-3. REPETITOR USLUBI: Javobni srazu aytma! 🛑 Oldin mavzuni tushuntir, 'Keling, birga o'ylaymiz' de, foydalanuvchini maqta! 👏
-4. MOTIVATSIYA: 'Siz buni uddalaysiz!', 'Juda zo'r savol berdingiz!' deb dalda ber. 💪🔥
+3. REPETITOR USLUBI (CHAYNAB BERISH): Javobni srazu aytma! 🛑 Oldin mavzuni tushuntir, foydalanuvchini maqta! 💪🔥
+4. XATOLARNI TUSHUNISH: Foydalanuvchi xato yozsa ham gap nima haqidaligini tushunib javob ber. 😊
 """
 
 model = genai.GenerativeModel(
@@ -24,9 +24,20 @@ model = genai.GenerativeModel(
     system_instruction=SYSTEM_INSTRUCTION
 )
 
-# 2. TUGMALAR ⌨️
+# 2. TUGMALAR (HAMMA MENYULAR) ⌨️
 main_menu = [['🌍 Jahon tillari', '🔢 Aniq fanlar']]
+languages_menu = [
+    ['🇩🇪 Nemis tili', '🇬🇧 Ingliz tili', '🇷🇺 Rus tili'], 
+    ['🇨🇳 Xitoy tili', '🇰🇷 Koreys tili', '🇸🇦 Arab tili'], 
+    ['🇹🇷 Turk tili', '⬅️ Orqaga']
+]
+science_menu = [
+    ['📝 Ona tili', '🧮 Matematika', '🔭 Fizika'], 
+    ['🧬 Biologiya', '📚 Adabiyot'], 
+    ['⬅️ Orqaga']
+]
 
+# 3. START 🚀
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Assalomu alaykum, bilimga chanqoq qadrdonim! ✨👋\n\n"
@@ -35,33 +46,46 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True)
     )
 
+# 4. XABARLARNI QAYTA ISHLASH 💬
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text
-    
-    if text == "🌍 Jahon tillari" or text == "🔢 Aniq fanlar":
+    user_data = context.user_data
+
+    # Menyu mantiqi 🧭
+    if text == "🌍 Jahon tillari":
+        await update.message.reply_text("Vau, tillarni o'rganish juda ajoyib! ✨ Qaysi tilni tanlaymiz, bilimdonim? 😊", 
+                                       reply_markup=ReplyKeyboardMarkup(languages_menu, resize_keyboard=True))
+        return
+    elif text == "🔢 Aniq fanlar":
+        await update.message.reply_text("Aniq fanlar dunyosiga xush kelibsiz! 🔍 Qaysi yo'nalishda savollaringiz bor? 📚", 
+                                       reply_markup=ReplyKeyboardMarkup(science_menu, resize_keyboard=True))
+        return
+    elif text == "⬅️ Orqaga":
+        await update.message.reply_text("Asosiy menyuga qaytdik, qadrdonim! 🏠✨", 
+                                       reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True))
+        return
+
+    # Fan tanlanganda saqlab qolish 🎓
+    subjects = ["tili", "Matematika", "Fizika", "Biologiya", "Adabiyot", "Ona tili"]
+    if any(s in text for s in subjects):
+        user_data['subject'] = text
         await update.message.reply_text(
-            f"Vau, ajoyib tanlov! {text} juda qiziqarli! 😍📚\n"
-            "Qani, biron bir savol bering-chi, birgalikda yechamiz! ✨🔍"
+            f"Tanlandi: {text}! ✅\n\n"
+            f"Endi bemalol menga savolingizni yo'llang, qadrdonim! Men sizga yordam berishga shayman! 💪🌟"
         )
         return
 
-    # AI javob berish jarayoni 🤖✨
+    # AI javobi 🤖
+    subject = user_data.get('subject', 'Umumiy bilimlar')
     try:
-        # Chatni boshlash
-        chat = model.start_chat(history=[])
-        response = chat.send_message(text)
-        
-        await update.message.reply_text(f"{response.text}")
-        
+        response = model.generate_content(f"Mavzu: {subject}. Foydalanuvchi so'rovi: {text}")
+        await update.message.reply_text(response.text)
     except Exception:
-        await update.message.reply_text(
-            "Voy, kechirasiz qadrdonim! ✨ Kichik bir texnik uzilish bo'ldi. 🙈\n"
-            "Iltimos, qaytadan yozib ko'ring, men sizga yordam berishga shayman! 💪🌟"
-        )
+        await update.message.reply_text("Voy, kichik bir xatolik bo'ldi! 🙈 Qayta yozing, bilimdonim! ✨")
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(BOT_TOKEN).build()
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
-    print("Quvnoq bot ishga tushdi... 🚀✨")
+    print("Quvnoq va aqlli bot ishga tushdi... 🚀✨")
     app.run_polling()
