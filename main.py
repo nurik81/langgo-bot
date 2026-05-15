@@ -1,3 +1,4 @@
+import os
 import asyncio
 import google.generativeai as genai
 
@@ -18,8 +19,8 @@ from telegram.ext import (
 # TOKENLAR
 # ====================================
 
-BOT_TOKEN = "BOT_TOKENINGIZ"
-GEMINI_KEY = "GEMINI_API_KEYINGIZ"
+BOT_TOKEN = "8649876958:AAEkEUERLE2rbXEQTcPcqgeDhOftv7_viuw"
+GEMINI_KEY = "AIzaSyDJotEGXkw0WDe19pf5limMkp35o9Qpt8s"
 
 # ====================================
 # GEMINI
@@ -276,7 +277,19 @@ def main():
 
     print("🚀 LangGo AI ishga tushdi")
 
-    app.run_polling()
+    # Render platformasi uchun port va webhook sozlamasi
+    PORT = int(os.environ.get("PORT", 10000))
+    RENDER_URL = os.environ.get("RENDER_EXTERNAL_URL")
+
+    if RENDER_URL:
+        app.run_webhook(
+            listen="0.0.0.0",
+            port=PORT,
+            url_path=BOT_TOKEN,
+            webhook_url=f"{RENDER_URL}/{BOT_TOKEN}"
+        )
+    else:
+        app.run_polling()
 
 # ====================================
 # START
