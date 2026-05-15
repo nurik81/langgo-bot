@@ -27,7 +27,7 @@ except ImportError:
 # =====================
 # 🔑 YANGI TOKEN
 # =====================
-TOKEN = "8649876958:AAHZx0GP06nsEiQnSr_S1JPaEJr0TbNTTn0"
+TOKEN = "8649876958:AAF3HaeCbT_qOMo2e052kJ-mpNOpoLqPhYA"
 
 # =====================
 # 📊 DATAFRAME TAYYORLASH
