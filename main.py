@@ -1,191 +1,286 @@
-import os
 import asyncio
-import pandas as pd
-from datetime import time
-import pytz
+import google.generativeai as genai
 
-from flask import Flask
-from threading import Thread
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup
+)
 
-from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
     MessageHandler,
-    ContextTypes,
-    filters
+    filters,
+    ContextTypes
 )
 
-# Alohida fayllardan so'zlarni import qilish
-try:
-    from german_words import de_data
-    from english_words import en_data
-except ImportError:
-    de_data = []
-    en_data = []
+# ====================================
+# TOKENLAR
+# ====================================
 
-# =====================
-# 🔑 YANGI TOKEN
-# =====================
-TOKEN = "8649876958:AAF3HaeCbT_qOMo2e052kJ-mpNOpoLqPhYA"
+BOT_TOKEN = "BOT_TOKENINGIZ"
+GEMINI_KEY = "GEMINI_API_KEYINGIZ"
 
-# =====================
-# 📊 DATAFRAME TAYYORLASH
-# =====================
-de_df = pd.DataFrame(de_data, columns=["uz", "ger", "article", "plural"])
-en_df = pd.DataFrame(en_data, columns=["uz", "en"])
+# ====================================
+# GEMINI
+# ====================================
 
-# =====================
-# 🧠 MEMORY
-# =====================
-user_lang = {}
-stats = {}
+genai.configure(api_key=GEMINI_KEY)
 
-# =====================
-# 🚀 START KOMANDASI
-# =====================
+SYSTEM_INSTRUCTION = """
+Siz 'LangGo AI' virtual akademiyasining professional ustozisiz.
+
+ASOSIY QOIDALAR:
+
+1. Siz hech qachon tayyor javob bermaysiz.
+
+2. Foydalanuvchini o‘ylashga majbur qilasiz.
+
+3. Agar foydalanuvchi:
+- test
+- variant
+- homework
+- speaking
+- writing
+- esse
+- insho
+- imtihon savoli
+yuborsa:
+
+❌ tayyor javobni aytmang
+❌ variantni aytmang
+❌ final answer yozmang
+
+✅ mavzuni tushuntiring
+✅ qadamlarni ko‘rsating
+✅ qanday o‘ylashni o‘rgating
+✅ grammar explain qiling
+✅ useful phrases bering
+✅ hint bering
+✅ misollar bilan tushuntiring
+
+4. Matematika va fizikada:
+- formulani yozing
+- formula nimani anglatishini tushuntiring
+- ishlash usulini ko‘rsating
+- qaysi formula ishlatilishini ayting
+- lekin oxirgi javobni chiqarmang
+
+5. Kimyo va biologiyada:
+- reaction
+- process
+- terminology
+- formula
+- theory
+tushuntiring.
+
+6. Tillar:
+Siz:
+- o‘zbek
+- ingliz
+- nemis
+- rus
+- turk
+tillarini tushunasiz.
+
+7. Agar foydalanuvchi rasm tashlasa:
+- savolni analiz qiling
+- tushuntiring
+- lekin javobni aytmang
+
+8. Foydalanuvchiga doim:
+"Siz"
+deb murojaat qiling.
+
+9. Professional va ustozlardek gapiring.
+
+10. Emojilar juda kam ishlatilsin.
+"""
+
+model = genai.GenerativeModel(
+    model_name="gemini-1.5-flash",
+    system_instruction=SYSTEM_INSTRUCTION
+)
+
+# ====================================
+# MENULAR
+# ====================================
+
+main_menu = [
+    ['🌍 Jahon tillari', '🔢 Aniq fanlar']
+]
+
+languages_menu = [
+    ['🇩🇪 Nemis tili', '🇬🇧 Ingliz tili'],
+    ['🇷🇺 Rus tili', '🇹🇷 Turk tili'],
+    ['⬅️ Orqaga']
+]
+
+science_menu = [
+    ['🧮 Matematika', '🔭 Fizika'],
+    ['🧪 Kimyo', '🧬 Biologiya'],
+    ['📚 Adabiyot', '📝 Ona tili'],
+    ['⬅️ Orqaga']
+]
+
+# ====================================
+# START
+# ====================================
+
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.message.chat_id
-    stats.setdefault(uid, {"de": 0, "en": 0})
-
-    keyboard = [["🇩🇪 Nemis tili", "🇬🇧 English"]]
 
     await update.message.reply_text(
-        "👋 Assalomu alaykum!\n\n"
-        "🌟 LangGo Botga xush kelibsiz.\n"
-        "📚 Nemis va ingliz tilini birga o‘rganamiz.\n\n"
-        "🚀 O‘rganmoqchi bo‘lgan tilingizni tanlang 🙂",
-        reply_markup=ReplyKeyboardMarkup(keyboard, resize_keyboard=True)
+        "🎓 LangGo AI akademiyasiga xush kelibsiz.\n\n"
+        "Kerakli bo‘limni tanlang:",
+        reply_markup=ReplyKeyboardMarkup(
+            main_menu,
+            resize_keyboard=True
+        )
     )
 
-# =====================
-# 🌙 KUNLIK HISOBOT
-# =====================
-async def send_report(context: ContextTypes.DEFAULT_TYPE):
-    for uid, d in stats.items():
-        total = d["de"] + d["en"]
-        msg = (
-            f"🌙 Kunlik hisobot\n\n"
-            f"🇩🇪 Nemischa: {d['de']}\n"
-            f"🇬🇧 Inglizcha: {d['en']}\n"
-            f"📚 Jami: {total}\n\n"
-        )
-        if total < 5:
-            msg += (
-                "💪 Bugun biroz kamroq ishladingiz.\n\n"
-                "📚 O‘zingiz ustingizda yana ham ko‘proq ishlang.\n"
-                "🚀 Har kuni oz bo‘lsa ham oldinga yurish katta natija beradi 🙂"
-            )
-        else:
-            msg += (
-                "🌟 Barakalla!\n\n"
-                "🔥 Bugun juda yaxshi ishladingiz.\n"
-                "📚 Siz asta-sekin kuchli levelga chiqyapsiz 🚀\n"
-                "👏 Shunday davom eting!"
-            )
-        try:
-            await context.bot.send_message(uid, msg)
-        except:
-            pass
-        stats[uid] = {"de": 0, "en": 0}
+# ====================================
+# HANDLE MESSAGE
+# ====================================
 
-# =====================
-# 🔍 SO'ZLARNI QIDIRISH (HANDLE)
-# =====================
-async def handle(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.message.chat_id
-    text = update.message.text.lower().strip()
-    stats.setdefault(uid, {"de": 0, "en": 0})
+async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    if "nemis" in text:
-        user_lang[uid] = "de"
+    text = update.message.text
+
+    # MAIN MENU
+
+    if text == "🌍 Jahon tillari":
+
         await update.message.reply_text(
-            "🇩🇪 Nemis tili tanlandi 🙂\n\n"
-            "📚 Nemis tilini o‘rganishda sizga omad tilaymiz!\n"
-            "✨ Endi so‘z yuboring."
+            "🌍 Tilni tanlang:",
+            reply_markup=ReplyKeyboardMarkup(
+                languages_menu,
+                resize_keyboard=True
+            )
         )
+
         return
 
-    if "english" in text:
-        user_lang[uid] = "en"
+    if text == "🔢 Aniq fanlar":
+
         await update.message.reply_text(
-            "🇬🇧 English selected 🙂\n\n"
-            "📚 We wish you success in learning English!\n"
-            "✨ Send a word."
+            "📚 Fanni tanlang:",
+            reply_markup=ReplyKeyboardMarkup(
+                science_menu,
+                resize_keyboard=True
+            )
         )
+
         return
 
-    lang = user_lang.get(uid)
-    if not lang:
-        return await update.message.reply_text("🙂 Avval til tanlang.")
+    if text == "⬅️ Orqaga":
 
-    # 🇩🇪 Nemischa qidiruv
-    if lang == "de":
-        r = de_df[(de_df["uz"] == text) | (de_df["ger"].str.lower() == text)]
-        if not r.empty:
-            r = r.iloc[0]
-            stats[uid]["de"] += 1
-            return await update.message.reply_text(
-                f"📘 Nemischa: {r['ger']}\n📌 Artikl: {r['article']}\n"
-                f"📚 Plural: {r['plural']}\n🇺🇿 Tarjimasi: {r['uz']}\n\n🌟 Davom eting!"
+        await update.message.reply_text(
+            "🏠 Asosiy menyu:",
+            reply_markup=ReplyKeyboardMarkup(
+                main_menu,
+                resize_keyboard=True
             )
-        return await update.message.reply_text("😔 Kechirasiz, bu so‘z bazada topilmadi.")
-
-    # 🇬🇧 Inglizcha qidiruv
-    if lang == "en":
-        r = en_df[(en_df["uz"] == text) | (en_df["en"].str.lower() == text)]
-        if not r.empty:
-            r = r.iloc[0]
-            stats[uid]["en"] += 1
-            return await update.message.reply_text(
-                f"📘 English: {r['en']}\n🇺🇿 Uzbek: {r['uz']}\n\n🌟 Keep going!"
-            )
-        return await update.message.reply_text("😔 Sorry, this word was not found.")
-
-# =====================
-# 🌐 WEB SERVER (Anti-Sleep)
-# =====================
-app_web = Flask(__name__)
-
-@app_web.route('/')
-def home():
-    return "LangGo Bot is Online! 🚀"
-
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    app_web.run(host='0.0.0.0', port=port)
-
-# =====================
-# 🏁 ASOSIY ISHGA TUSHIRISH
-# =====================
-async def main():
-    application = ApplicationBuilder().token(TOKEN).build()
-
-    application.add_handler(CommandHandler("start", start))
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle))
-
-    uz_tz = pytz.timezone("Asia/Tashkent")
-    if application.job_queue:
-        application.job_queue.run_daily(
-            send_report,
-            time=time(hour=22, minute=0, tzinfo=uz_tz)
         )
 
-    print("🚀 Bot ishga tushdi...")
+        return
 
-    async with application:
-        await application.initialize()
-        await application.start()
-        await application.updater.start_polling()
-        await asyncio.Event().wait()
+    # SUBJECT SAVE
+
+    subjects = [
+        "Nemis",
+        "Ingliz",
+        "Rus",
+        "Turk",
+        "Matematika",
+        "Fizika",
+        "Kimyo",
+        "Biologiya",
+        "Adabiyot",
+        "Ona tili"
+    ]
+
+    if any(s.lower() in text.lower() for s in subjects):
+
+        context.user_data["subject"] = text
+
+        await update.message.reply_text(
+            f"✅ {text} bo‘limi tanlandi.\n\n"
+            "📩 Savolingizni yuboring."
+        )
+
+        return
+
+    # SUBJECT
+
+    subject = context.user_data.get("subject", "Umumiy")
+
+    try:
+
+        prompt = f"""
+Fan: {subject}
+
+Foydalanuvchi savoli:
+{text}
+
+MUHIM:
+- Tayyor javobni bermang
+- Variantni aytmang
+- Final answer yozmang
+- O‘quvchini o‘ylashga majbur qiling
+- Ustozdek tushuntiring
+- Step-by-step yo‘l ko‘rsating
+"""
+
+        response = await asyncio.to_thread(
+            model.generate_content,
+            prompt
+        )
+
+        ai_text = getattr(response, "text", None)
+
+        if not ai_text:
+            ai_text = "⚠️ AI javob qaytarmadi."
+
+        await update.message.reply_text(ai_text)
+
+    except Exception as e:
+
+        print("ERROR:", e)
+
+        await update.message.reply_text(
+            "⚠️ Texnik xatolik yuz berdi."
+        )
+
+# ====================================
+# MAIN
+# ====================================
+
+def main():
+
+    app = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .build()
+    )
+
+    app.add_handler(
+        CommandHandler("start", start)
+    )
+
+    app.add_handler(
+        MessageHandler(
+            filters.TEXT & ~filters.COMMAND,
+            handle_message
+        )
+    )
+
+    print("🚀 LangGo AI ishga tushdi")
+
+    app.run_polling()
+
+# ====================================
+# START
+# ====================================
 
 if __name__ == "__main__":
-    # Web serverni alohida thread'da ishga tushirish
-    t = Thread(target=run_web)
-    t.daemon = True
-    t.start()
-    
-    try:
-        asyncio.run(main())
-    except (KeyboardInterrupt, SystemExit):
-        print("Bot to'xtatildi.")
+    main()
