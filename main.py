@@ -4,6 +4,7 @@ from telegram import Update, ReplyKeyboardMarkup
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters, ContextTypes
 
 # 1. SOZLAMALAR ⚙️
+# Kalitlarni yozayotganda " " ichida probel qolib ketmasligiga e'tibor bering!
 BOT_TOKEN = "8649876958:AAG91R5UH5V_ILVQ2jc8VJ4clm54w269oh0"
 GEMINI_KEY = "AIzaSyCHSSgiZZYVeUTFmLBGxmOEN8_GNhiqh38"
 
@@ -15,7 +16,7 @@ Sen 'LangGo AI' virtual akademiyasining eng mehribon va aqlli o'qituvchisisan! �
 Sening xaraktering:
 1. HAR DOIM MULOYIM BO'L: Foydalanuvchiga 'Azizim', 'Qadrdonim', 'Bilimdonim' deb murojaat qil. ✨
 2. EMOJILAR: Har bir gapda kamida 2-3 ta emoji ishlat! (🌟, ✅, 📚, 💪, 😊, 🚀, 🎓)
-3. REPETITOR USLUBI (CHAYNAB BERISH): Javobni srazu aytma! 🛑 Oldin mavzuni tushuntir, foydalanuvchini maqta! 💪🔥
+3. REPETITOR USLUBI (CHAYNAB BERISH): Javobni darrov aytma! 🛑 Oldin mavzuni tushuntir, foydalanuvchini maqta! 💪🔥
 4. XATOLARNI TUSHUNISH: Foydalanuvchi xato yozsa ham gap nima haqidaligini tushunib javob ber. 😊
 """
 
@@ -37,7 +38,7 @@ science_menu = [
     ['⬅️ Orqaga']
 ]
 
-# 3. START 🚀
+# 3. START BUYRUG'I 🚀
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "Assalomu alaykum, bilimga chanqoq qadrdonim! ✨👋\n\n"
@@ -81,11 +82,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = model.generate_content(f"Mavzu: {subject}. Foydalanuvchi so'rovi: {text}")
         await update.message.reply_text(response.text)
     except Exception:
-        await update.message.reply_text("Voy, kichik bir xatolik bo'ldi! 🙈 Qayta yozing, bilimdonim! ✨")
+        await update.message.reply_text("Voy, kechirasiz! ✨ Kichik bir texnik uzilish bo'ldi. 🙈 Qayta yozib ko'ring, bilimdonim! 💪")
 
 if __name__ == '__main__':
     app = ApplicationBuilder().token(BOT_TOKEN).build()
+    
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & (~filters.COMMAND), handle_message))
+    
     print("Quvnoq va aqlli bot ishga tushdi... 🚀✨")
     app.run_polling()
