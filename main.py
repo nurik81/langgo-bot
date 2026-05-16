@@ -21,7 +21,7 @@ from telegram.ext import (
 # ====================================
 # TOKENLAR
 # ====================================
-BOT_TOKEN = "8649876958:AAHdvgmtzdA7LjSqNEIpZ-0uXgiwM1X_nl4"
+BOT_TOKEN = "8649876958:AAGH5r85Qnamgh5bZ6G09Z96r5k-bU7dxHA"
 GEMINI_KEY = "AIzaSyA8d5erXLy-k6Y6eNLZvZ5O9RI14vkkWPY"
 
 # ====================================
