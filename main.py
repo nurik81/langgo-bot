@@ -1,5 +1,9 @@
+import os
 import asyncio
 import google.generativeai as genai
+
+from flask import Flask
+from threading import Thread
 
 from telegram import (
     Update,
@@ -81,7 +85,7 @@ yuborsa:
 - terminology
 - formula
 - theory
-tushuntiring.
+tushuntiring
 
 5. Tillar:
 Siz:
@@ -90,7 +94,7 @@ Siz:
 - nemis
 - rus
 - turk
-tillarini tushunasiz.
+tillarini tushunasiz
 
 6. Agar foydalanuvchi rasm tashlasa:
 - rasm ichidagi savolni analiz qiling
@@ -109,17 +113,35 @@ tillarini tushunasiz.
 
 8. Foydalanuvchiga doim:
 "Siz"
-deb murojaat qiling.
+deb murojaat qiling
 
-9. Professional ustoz kabi gapiring.
+9. Professional ustoz kabi gapiring
 
-10. Emojilar juda kam ishlatilsin.
+10. Emojilar juda kam ishlatilsin
 """
 
 model = genai.GenerativeModel(
     model_name="gemini-1.5-flash",
     system_instruction=SYSTEM_INSTRUCTION
 )
+
+# ====================================
+# WEB SERVER
+# ====================================
+
+app_web = Flask(__name__)
+
+@app_web.route("/")
+def home():
+    return "LangGo Academy ishlayapti 🚀"
+
+def run_web():
+    port = int(os.environ.get("PORT", 10000))
+
+    app_web.run(
+        host="0.0.0.0",
+        port=port
+    )
 
 # ====================================
 # MENULAR
@@ -274,10 +296,6 @@ MUHIM:
 
     try:
 
-        # =========================
-        # GEMINI REQUEST
-        # =========================
-
         response = await asyncio.to_thread(
             model.generate_content,
             prompt
@@ -290,6 +308,7 @@ MUHIM:
         )
 
         if not ai_text:
+
             ai_text = (
                 "⚠️ AI javob qaytarmadi.\n"
                 "Keyinroq qayta urinib ko‘ring."
@@ -341,4 +360,8 @@ def main():
 # ====================================
 
 if __name__ == "__main__":
+
+    t = Thread(target=run_web)
+    t.start()
+
     main()
