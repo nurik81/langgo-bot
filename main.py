@@ -136,11 +136,14 @@ def home():
     return "LangGo Academy ishlayapti 🚀"
 
 def run_web():
+    # Render muhiti uchun standart port 10000 yoki dinamik berilgan port olinadi
     port = int(os.environ.get("PORT", 10000))
-
+    # Flask obyektini Render portni tezda aniqlashi uchun to'g'ri ishga tushiramiz
     app_web.run(
         host="0.0.0.0",
-        port=port
+        port=port,
+        debug=False,
+        use_reloader=False
     )
 
 # ====================================
@@ -330,6 +333,9 @@ MUHIM:
 # ====================================
 
 def main():
+    # Flask veb serverini alohida oqimda (Thread) xavfsiz ishga tushiramiz
+    t = Thread(target=run_web, daemon=True)
+    t.start()
 
     app = (
         ApplicationBuilder()
@@ -352,7 +358,8 @@ def main():
     )
 
     print("🚀 LangGo Academy ishga tushdi")
-
+    
+    # Polling rejimini muammosiz asinxron tsiklda boshlaymiz
     app.run_polling()
 
 # ====================================
@@ -360,8 +367,4 @@ def main():
 # ====================================
 
 if __name__ == "__main__":
-
-    t = Thread(target=run_web)
-    t.start()
-
     main()
