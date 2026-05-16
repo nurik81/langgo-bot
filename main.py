@@ -21,103 +21,48 @@ from telegram.ext import (
 # ====================================
 # TOKENLAR
 # ====================================
-
-BOT_TOKEN = "8649876958:AAEkEUERLE2rbXEQTcPcqgeDhOftv7_viuw"
+BOT_TOKEN = "8649876958:AAHdvgmtzdA7LjSqNEIpZ-0uXgiwM1X_nl4"
 GEMINI_KEY = "AIzaSyA8d5erXLy-k6Y6eNLZvZ5O9RI14vkkWPY"
 
 # ====================================
 # GEMINI AI
 # ====================================
-
 genai.configure(api_key=GEMINI_KEY)
 
 SYSTEM_INSTRUCTION = """
-Siz 'LangGo Academy' platformasining professional virtual ustozisiz.
-
-Sizning asosiy vazifangiz:
-- foydalanuvchini o‘rgatish
-- tushuntirish
-- fikrlashga majbur qilish
-- yo‘l ko‘rsatish
-
-Siz hech qachon oddiy javob mashinasi emassiz.
+Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual ustozisiz.
+Sizning maqsadingiz foydalanuvchiga tayyor javobni berish emas, balki uni fikrlashga majbur qilish va yo'naltirishdir.
 
 ======================================
-MUHIM QOIDALAR
+QAT'IY METODIK MAJBURIYATLARINGIZ:
 ======================================
 
-1. Siz hech qachon tayyor javob bermaysiz.
+1. JAHON TILLARI BO'LIMI (Ingliz, Nemis, Rus, Turk tillari):
+Siz ushbu tillarni mukammal bilasiz. Foydalanuvchi murojaat qilganda faqat quyidagi 2 ta holat bo'yicha javob bering:
 
-2. Agar foydalanuvchi:
-- test
-- variant
-- homework
-- speaking
-- writing
-- esse
-- insho
-- imtihon savoli
-- worksheet
-yuborsa:
+   A. Agar foydalanuvchi FAQAT BITTA SO'Z yuborsa (Masalan: "olma", "kitob", "qalam"):
+      - Shu so'zning foydalanuvchi tanlagan tildagi to'g'ri tarjimasini (artikli yoki o'ziga xos xususiyatlari bilan) yozing.
+      - Shu so'z qatnashgan bitta chiroyli va tushunarli MISOL GAP (ustozlar darajasida) tuzing va uning o'zbekcha tarjimasini bering.
+      - Ortqicha gap yozmang, qisqa va lo'nda bo'ling.
 
-❌ to‘g‘ridan-to‘g‘ri javobni aytmang
-❌ variantni aytmang
-❌ final answer yozmang
+   B. Agar foydalanuvchi GRAMMATIK SAVOL so'rasa (Masalan: "Akkusativ nima", "Present Simple haqida tushuntir"):
+      - Grammatik qoidani o'ta professional, sodda va to'liq tushuntirib bering.
+      - Tushuntirish tugagach, gapni qat'iy ravishda mana shu gap bilan yakunlang:
+        "Ushbu grammatik qoida bo'yicha mana shu o'zbekcha gapni tarjima qiling, men tekshirib beraman: [SHU YERGA MAVZUGA OID BITTA O'ZBEKCHA GAPNI YOZING]"
 
-✅ mavzuni tushuntiring
-✅ step-by-step yo‘l ko‘rsating
-✅ qanday fikrlash kerakligini o‘rgating
-✅ useful phrases bering
-✅ grammar explain qiling
-✅ hint bering
-✅ misollar bilan tushuntiring
+2. ANIQ VA TABIIY FANLAR BO'LIMI (Matematika, Fizika, Kimyo, Biologiya, Adabiyot, Ona tili):
+Foydalanuvchi fan yuzasidan savol yoki mavzu yuborganida:
+   - Hech qachon yakuniy javobni, tayyor yechimni yoki variantni aytmang.
+   - Mavzuning mohiyatini, formulasini yoki teoriyasini professional tarzda tushuntiring.
+   - Mavzuga doir to'liq yechilgan BITTA MISOL (namuna) ko'rsating.
+   - Foydalanuvchi o'zi mustaqil fikrlashi uchun BITTA SAVOL yoki MASALA bering va undan javobni kuting.
 
-3. Matematika va fizikada:
-- formulani yozing
-- formula nimani anglatishini tushuntiring
-- qaysi formuladan foydalanishni ayting
-- ishlash yo‘lini ko‘rsating
-- lekin oxirgi javobni chiqarmang
-
-4. Kimyo va biologiyada:
-- process
-- reaction
-- terminology
-- formula
-- theory
-tushuntiring
-
-5. Tillar:
-Siz:
-- o‘zbek
-- ingliz
-- nemis
-- rus
-- turk
-tillarini tushunasiz
-
-6. Agar foydalanuvchi rasm tashlasa:
-- rasm ichidagi savolni analiz qiling
-- savolni tushuntiring
-- qanday ishlashni ayting
-- lekin javobni aytmang
-
-7. Speaking va writing:
-❌ tayyor speaking yozib bermang
-❌ tayyor esse yozib bermang
-
-✅ idea bering
-✅ structure bering
-✅ useful words bering
-✅ grammar explain qiling
-
-8. Foydalanuvchiga doim:
-"Siz"
-deb murojaat qiling
-
-9. Professional ustoz kabi gapiring
-
-10. Emojilar juda kam ishlatilsin
+======================================
+UMUMIY USLUBIY QOIDALAR:
+======================================
+- Foydalanuvchiga doim hurmat bilan "Siz" deb murojaat qiling.
+- Haqiqiy jonli ustoz muhitini yarating, lekin emojilarni juda kam va faqat kerakli o'rinlarda ishlating.
+- Agar foydalanuvchi rasm yuborsa ham, ushbu qoidalar doirasida rasm ichidagi savolni tushuntirib, yo'l ko'rsating, lekin yakuniy javobni yozmang.
 """
 
 model = genai.GenerativeModel(
@@ -128,7 +73,6 @@ model = genai.GenerativeModel(
 # ====================================
 # WEB SERVER
 # ====================================
-
 app_web = Flask(__name__)
 
 @app_web.route("/")
@@ -136,9 +80,7 @@ def home():
     return "LangGo Academy ishlayapti 🚀"
 
 def run_web():
-    # Render muhiti uchun standart port 10000 yoki dinamik berilgan port olinadi
     port = int(os.environ.get("PORT", 10000))
-    # Flask obyektini Render portni tezda aniqlashi uchun to'g'ri ishga tushiramiz
     app_web.run(
         host="0.0.0.0",
         port=port,
@@ -149,7 +91,6 @@ def run_web():
 # ====================================
 # MENULAR
 # ====================================
-
 main_menu = [
     ['🌍 Jahon tillari', '🔢 Aniq fanlar']
 ]
@@ -170,9 +111,7 @@ science_menu = [
 # ====================================
 # START
 # ====================================
-
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     welcome_text = (
         "🎓 LangGo Academy platformasiga xush kelibsiz.\n\n"
         "📚 Bu yerda siz:\n"
@@ -195,134 +134,73 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 # ====================================
 # HANDLE MESSAGE
 # ====================================
-
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-
     text = update.message.text.strip()
 
     # =========================
     # MAIN MENU
     # =========================
-
     if text == "🌍 Jahon tillari":
-
         await update.message.reply_text(
             "🌍 Tilni tanlang:",
-            reply_markup=ReplyKeyboardMarkup(
-                languages_menu,
-                resize_keyboard=True
-            )
+            reply_markup=ReplyKeyboardMarkup(languages_menu, resize_keyboard=True)
         )
-
         return
 
     if text == "🔢 Aniq fanlar":
-
         await update.message.reply_text(
             "📚 Fanni tanlang:",
-            reply_markup=ReplyKeyboardMarkup(
-                science_menu,
-                resize_keyboard=True
-            )
+            reply_markup=ReplyKeyboardMarkup(science_menu, resize_keyboard=True)
         )
-
         return
 
     if text == "⬅️ Orqaga":
-
         await update.message.reply_text(
             "🏠 Asosiy menyu:",
-            reply_markup=ReplyKeyboardMarkup(
-                main_menu,
-                resize_keyboard=True
-            )
+            reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True)
         )
-
         return
 
     # =========================
     # SUBJECT SAVE
     # =========================
-
-    subjects = [
-        "Nemis",
-        "Ingliz",
-        "Rus",
-        "Turk",
-        "Matematika",
-        "Fizika",
-        "Kimyo",
-        "Biologiya",
-        "Adabiyot",
-        "Ona tili"
-    ]
+    subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
 
     if any(s.lower() in text.lower() for s in subjects):
-
         context.user_data["subject"] = text
-
         await update.message.reply_text(
             f"✅ {text} bo‘limi tanlandi.\n\n"
             "📩 Endi savolingizni yuboring."
         )
-
         return
 
     # =========================
     # SUBJECT
     # =========================
-
-    subject = context.user_data.get(
-        "subject",
-        "Umumiy"
-    )
+    subject = context.user_data.get("subject", "Umumiy")
 
     # =========================
     # AI PROMPT
     # =========================
-
     prompt = f"""
-Fan yoki yo‘nalish:
-{subject}
+Tanlangan fan/yo'nalish: {subject}
+Foydalanuvchi yuborgan matn yoki savol: {text}
 
-Foydalanuvchi savoli:
-{text}
-
-MUHIM:
-- Tayyor javobni bermang
-- Variantni aytmang
-- Final answer yozmang
-- O‘quvchini fikrlashga majbur qiling
-- Professional ustozdek tushuntiring
-- Step-by-step yo‘l ko‘rsating
+Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga (bitta so'zga tarjima + bitta misol gap; grammatikaga to'liq izoh + bitta o'zbekcha gap topshiriq; fanlarga tushuntirish + bitta misol + bitta savol) qat'iy amal qiling!
 """
 
     try:
-
-        response = await asyncio.to_thread(
-            model.generate_content,
-            prompt
-        )
-
-        ai_text = getattr(
-            response,
-            "text",
-            None
-        )
+        # Eski to_thread o'rniga xavfsiz va toza asinxron metoddan foydalanamiz
+        response = await model.generate_content_async(prompt)
+        ai_text = getattr(response, "text", None)
 
         if not ai_text:
-
-            ai_text = (
-                "⚠️ AI javob qaytarmadi.\n"
-                "Keyinroq qayta urinib ko‘ring."
-            )
+            ai_text = "⚠️ AI javob qaytarmadi.\nKeyinroq qayta urinib ko‘ring."
 
         await update.message.reply_text(ai_text)
 
     except Exception as e:
-
         print("ERROR:", e)
-
         await update.message.reply_text(
             "⚠️ Texnik xatolik yuz berdi.\n"
             "Keyinroq qayta urinib ko‘ring."
@@ -331,9 +209,8 @@ MUHIM:
 # ====================================
 # MAIN
 # ====================================
-
 def main():
-    # Flask veb serverini alohida oqimda (Thread) xavfsiz ishga tushiramiz
+    # Web serverni asinxron xavfsiz oqimda daemon rejimda yoqamiz
     t = Thread(target=run_web, daemon=True)
     t.start()
 
@@ -343,28 +220,14 @@ def main():
         .build()
     )
 
-    app.add_handler(
-        CommandHandler(
-            "start",
-            start
-        )
-    )
-
-    app.add_handler(
-        MessageHandler(
-            filters.TEXT & ~filters.COMMAND,
-            handle_message
-        )
-    )
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
     print("🚀 LangGo Academy ishga tushdi")
-    
-    # Polling rejimini muammosiz asinxron tsiklda boshlaymiz
     app.run_polling()
 
 # ====================================
 # START
 # ====================================
-
 if __name__ == "__main__":
     main()
