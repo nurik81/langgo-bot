@@ -3,7 +3,6 @@ import asyncio
 import google.generativeai as genai
 
 from flask import Flask
-from threading import Thread
 
 from telegram import (
     Update,
@@ -31,7 +30,7 @@ genai.configure(api_key=GEMINI_KEY)
 
 SYSTEM_INSTRUCTION = """
 Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual ustozisiz.
-Sizning maqsadingiz foydalanuvchiga tayyor javobni berish emas, balki uni fikrlashga majbur qilish va yo'naltirishdir.
+Sizning maqsadianiz foydalanuvchiga tayyor javobni berish emas, balki uni fikrlashga majbur qilish va yo'naltirishdir.
 
 ======================================
 QAT'IY METODIK MAJBURIYATLARINGIZ:
@@ -71,22 +70,13 @@ model = genai.GenerativeModel(
 )
 
 # ====================================
-# WEB SERVER
+# WEB SERVER (Gunicorn uchun xavfsiz holatda)
 # ====================================
 app_web = Flask(__name__)
 
 @app_web.route("/")
 def home():
     return "LangGo Academy ishlayapti 🚀"
-
-def run_web():
-    port = int(os.environ.get("PORT", 10000))
-    app_web.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False,
-        use_reloader=False
-    )
 
 # ====================================
 # MENULAR
@@ -159,7 +149,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Fan yoki til tanlanganini aniqlash (Faqat tugma bosilganda ishlaydi)
+    # Fan yoki til tanlanganini aniqlash (Faqat tugma bosilganda saqlaydi)
     subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
     
     is_subject_button = any(s.lower() in text.lower() for s in subjects) and (
@@ -188,8 +178,7 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
 """
 
     try:
-        # python-telegram-bot v21+ uchun Gemini so'rovini xavfsiz sinxron oqimda asinxron bajarish
-        # generate_content_async o'rniga model.generate_content ni to_thread orqali chaqiramiz
+        # Gemini so'rovini xavfsiz alohida oqimga (to_thread) o'tkazamiz
         response = await asyncio.to_thread(model.generate_content, prompt)
         ai_text = response.text
 
@@ -208,9 +197,7 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
 # MAIN
 # ====================================
 def main():
-    t = Thread(target=run_web, daemon=True)
-    t.start()
-
+    # Bu yerdagi port talashayotgan Thread qismlari olib tashlandi
     app = (
         ApplicationBuilder()
         .token(BOT_TOKEN)
@@ -220,7 +207,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    print("🚀 LangGo Academy ishga tushdi")
+    print("🚀 LangGo Academy Telegram Bot ishga tushdi")
     app.run_polling()
 
 if __name__ == "__main__":
