@@ -1,6 +1,6 @@
 import os
 import asyncio
-import google.generativeai as genai
+import requests  # To'g'ridan-to'g'ri Google API bilan bog'lanish uchun
 
 from flask import Flask
 
@@ -22,11 +22,6 @@ from telegram.ext import (
 # ====================================
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
-
-# ====================================
-# GEMINI AI
-# ====================================
-genai.configure(api_key=GEMINI_KEY)
 
 SYSTEM_INSTRUCTION = """
 Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual ustozisiz.
@@ -60,14 +55,9 @@ Foydalanuvchi fan yuzasidan savol yoki mavzu yuborganida:
 UMUMIY USLUBIY QOIDALAR:
 ======================================
 - Foydalanuvchiga doim hurmat bilan "Siz" deb murojaat qiling.
-- Haqiqiy jonli ustoz muhitini yarating, lekin emojilarni juda kam va faqat kerakli o'rinzada ishlating.
+- Haqiqiy jonli ustoz muhitini yarating, lekin emojilarni juda kam va faqat kerakli o'rinlarda ishlating.
 - Agar foydalanuvchi rasm yuborsa ham, ushbu qoidalar doirasida rasm ichidagi savolni tushuntirib, yo'l ko'rsating, lekin yakuniy javobni yozmang.
 """
-
-model = genai.GenerativeModel(
-    model_name="gemini-1.5-flash",
-    system_instruction=SYSTEM_INSTRUCTION
-)
 
 # ====================================
 # WEB SERVER
@@ -178,25 +168,34 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
 """
 
     try:
-        if not BOT_TOKEN or not GEMINI_KEY:
-            await update.message.reply_text("⚠️ Server sozlamalarida xatolik: Tokenlar topilmadi!")
+        if not GEMINI_KEY:
+            await update.message.reply_text("⚠️ API kalit (GEMINI_API_KEY) serverga kiritilmagan!")
             return
 
-        # DIQQAT: Xavfsiz, qotib qolmaydigan asinxron oqim!
-        response = await asyncio.to_thread(model.generate_content, prompt)
+        # Chet el serverlaridagi mintaqa taqiqlarini aylanib o'tuvchi xavfsiz HTTP API
+        url = f"https://googleapis.com{GEMINI_KEY}"
         
-        if response and hasattr(response, 'text'):
-            ai_text = response.text
-        else:
-            ai_text = "⚠️ AI hozircha javob bera olmadi. Keyinroq qayta urinib ko‘ring."
+        payload = {
+            "contents": [{"parts": [{"text": prompt}]}],
+            "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]}
+        }
+        
+        # Server qotib qolmasligi uchun sinxron so'rovni alohida oqimga joylaymiz
+        response = await asyncio.to_thread(requests.post, url, json=payload, timeout=20)
+        res_data = response.json()
 
-        await update.message.reply_text(ai_text)
+        # Javobni tekshirish
+        if response.status_code == 200 and "candidates" in res_data:
+            ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
+            await update.message.reply_text(ai_text)
+        else:
+            # Muammo bo'lsa Google qaytargan aniq xatolik matnini ko'rsatish
+            err_msg = res_data.get("error", {}).get("message", "Noma'lum xatolik")
+            await update.message.reply_text(f"⚠️ Google API xatoligi: {err_msg}")
 
     except Exception as e:
-        print(f"GEMINI ERROR: {e}")
-        await update.message.reply_text(
-            "⚠️ Texnik xatolik yuz berdi.\nKeyinroq qayta urinib ko‘ring."
-        )
+        print(f"API ERROR: {e}")
+        await update.message.reply_text(f"⚠️ Texnik xatolik yuz berdi: {str(e)[:50]}")
 
 # ====================================
 # VEB SERVERNI ALOHIDA OQIMDA ISHGA TUSHIRISH
@@ -206,14 +205,14 @@ def start_flask():
     app_web.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 # ====================================
-# MAIN
+# MAIN (BOTNI YOQISH)
 # ====================================
 def main():
     if not BOT_TOKEN:
         print("🔴 Xatolik: TELEGRAM_BOT_TOKEN muhit o'zgaruvchisi topilmadi!")
         return
 
-    # Flask veb-serverini alohida fondagi oqimda yoqamiz (Port talashmaydi)
+    # Render o'chib qolmasligi uchun Flask veb-serverini alohida oqimda yoqamiz
     flask_thread = Thread(target=start_flask, daemon=True)
     flask_thread.start()
     print("🚀 Flask veb-server orqa fonda ishga tushdi")
