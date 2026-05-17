@@ -1,4 +1,4 @@
 python-telegram-bot[http]==21.6
 google-generativeai==0.8.5
-flask
-gunicorn
+Flask==3.0.3
+gunicorn==22.0.0
