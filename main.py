@@ -21,7 +21,7 @@ from telegram.ext import (
 # ====================================
 # TOKENLAR
 # ====================================
-BOT_TOKEN = "8649876958:AAGH5r85Qnamgh5bZ6G09Z96r5k-bU7dxHA"
+BOT_TOKEN = "8649876958:AAGSsc0NR53FBf-6lCOr_u2XAHP1ZGh9JA4"
 GEMINI_KEY = "AIzaSyA8d5erXLy-k6Y6eNLZvZ5O9RI14vkkWPY"
 
 # ====================================
@@ -137,9 +137,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = update.message.text.strip()
 
-    # =========================
-    # MAIN MENU
-    # =========================
+    # Navigatsiya menyulari
     if text == "🌍 Jahon tillari":
         await update.message.reply_text(
             "🌍 Tilni tanlang:",
@@ -161,12 +159,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # =========================
-    # SUBJECT SAVE
-    # =========================
+    # Fan yoki til tanlanganini aniqlash (Faqat tugma bosilganda ishlaydi)
     subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
+    
+    is_subject_button = any(s.lower() in text.lower() for s in subjects) and (
+        "tili" in text.lower() or any(text == btn for row in science_menu for btn in row)
+    )
 
-    if any(s.lower() in text.lower() for s in subjects):
+    if is_subject_button:
         context.user_data["subject"] = text
         await update.message.reply_text(
             f"✅ {text} bo‘limi tanlandi.\n\n"
@@ -174,43 +174,40 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # =========================
-    # SUBJECT
-    # =========================
-    subject = context.user_data.get("subject", "Umumiy")
+    # Foydalanuvchi savol yuborganda tekshirish
+    subject = context.user_data.get("subject")
+    if not subject:
+        await update.message.reply_text("⚠️ Iltimos, avval menyudan biror bir til yoki fanni tanlang!")
+        return
 
-    # =========================
-    # AI PROMPT
-    # =========================
     prompt = f"""
 Tanlangan fan/yo'nalish: {subject}
 Foydalanuvchi yuborgan matn yoki savol: {text}
 
-Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga (bitta so'zga tarjima + bitta misol gap; grammatikaga to'liq izoh + bitta o'zbekcha gap topshiriq; fanlarga tushuntirish + bitta misol + bitta savol) qat'iy amal qiling!
+Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat'iy amal qiling!
 """
 
     try:
-        # Eski to_thread o'rniga xavfsiz va toza asinxron metoddan foydalanamiz
-        response = await model.generate_content_async(prompt)
-        ai_text = getattr(response, "text", None)
+        # python-telegram-bot v21+ uchun Gemini so'rovini xavfsiz sinxron oqimda asinxron bajarish
+        # generate_content_async o'rniga model.generate_content ni to_thread orqali chaqiramiz
+        response = await asyncio.to_thread(model.generate_content, prompt)
+        ai_text = response.text
 
         if not ai_text:
-            ai_text = "⚠️ AI javob qaytarmadi.\nKeyinroq qayta urinib ko‘ring."
+            ai_text = "⚠️ AI hozircha javob bera olmadi. Keyinroq qayta urinib ko‘ring."
 
         await update.message.reply_text(ai_text)
 
     except Exception as e:
-        print("ERROR:", e)
+        print(f"GEMINI ERROR: {e}")
         await update.message.reply_text(
-            "⚠️ Texnik xatolik yuz berdi.\n"
-            "Keyinroq qayta urinib ko‘ring."
+            "⚠️ Texnik xatolik yuz berdi.\nKeyinroq qayta urinib ko‘ring."
         )
 
 # ====================================
 # MAIN
 # ====================================
 def main():
-    # Web serverni asinxron xavfsiz oqimda daemon rejimda yoqamiz
     t = Thread(target=run_web, daemon=True)
     t.start()
 
@@ -226,8 +223,5 @@ def main():
     print("🚀 LangGo Academy ishga tushdi")
     app.run_polling()
 
-# ====================================
-# START
-# ====================================
 if __name__ == "__main__":
     main()
