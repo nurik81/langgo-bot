@@ -1,6 +1,6 @@
 import os
 import asyncio
-import requests  # To'g'ridan-to'g'ri Google API bilan bog'lanish uchun
+import requests
 
 from flask import Flask
 
@@ -18,7 +18,7 @@ from telegram.ext import (
 )
 
 # ====================================
-# TOKENLAR (Render tizimidan xavfsiz o'qiladi)
+# TOKENLAR (Render tizimidan o'qiladi)
 # ====================================
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
@@ -45,7 +45,7 @@ Siz ushbu tillarni mukammal bilasiz. Foydalanuvchi murojaat qilganda faqat quyid
         "Ushbu grammatik qoida bo'yicha mana shu o'zbekcha gapni tarjima qiling, men tekshirib beraman: [SHU YERGA MAVZUGA OID BITTA O'ZBEKCHA GAPNI YOZING]"
 
 2. ANIQ VA TABIIY FANLAR BO'LIMI (Matematika, Fizika, Kimyo, Biologiya, Adabiyot, Ona tili):
-Foydalanuvchi fan yuzasidan savol yoki mavzu yuborganida:
+Foydalanuvchi fan yuzasidan savol yoki maven yuborganida:
    - Hech qachon yakuniy javobni, tayyor yechimni yoki variantni aytmang.
    - Mavzuning mohiyatini, formulasini yoki teoriyasini professional tarzda tushuntiring.
    - Mavzuga doir to'liq yechilgan BITTA MISOL (namuna) ko'rsating.
@@ -172,30 +172,45 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
             await update.message.reply_text("⚠️ API kalit (GEMINI_API_KEY) serverga kiritilmagan!")
             return
 
-        # Chet el serverlaridagi mintaqa taqiqlarini aylanib o'tuvchi xavfsiz HTTP API
-        url = f"https://googleapis.com{GEMINI_KEY}"
+        # URL manzil mutlaqo to'g'ri holatga keltirildi
+        url = "https://googleapis.com"
         
-        payload = {
-            "contents": [{"parts": [{"text": prompt}]}],
-            "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]}
+        headers = {
+            "Content-Type": "application/json"
         }
         
-        # Server qotib qolmasligi uchun sinxron so'rovni alohida oqimga joylaymiz
-        response = await asyncio.to_thread(requests.post, url, json=payload, timeout=20)
+        payload = {
+            "contents": [{
+                "parts": [{"text": prompt}]
+            }],
+            "systemInstruction": {
+                "parts": [{"text": SYSTEM_INSTRUCTION}]
+            }
+        }
+        
+        # API Keyni parametrlarda xavfsiz uzatamiz
+        params = {"key": GEMINI_KEY}
+        
+        # HTTP So'rov yuborish
+        response = await asyncio.to_thread(requests.post, url, json=payload, headers=headers, params=params, timeout=25)
         res_data = response.json()
 
-        # Javobni tekshirish
-        if response.status_code == 200 and "candidates" in res_data:
-            ai_text = res_data["candidates"][0]["content"]["parts"][0]["text"]
-            await update.message.reply_text(ai_text)
+        if response.status_code == 200:
+            if "candidates" in res_data and len(res_data["candidates"]) > 0:
+                parts = res_data["candidates"][0].get("content", {}).get("parts", [])
+                if parts and "text" in parts[0]:
+                    ai_text = parts[0]["text"]
+                    await update.message.reply_text(ai_text)
+                    return
+            
+            await update.message.reply_text("⚠️ AI tuzilmasidan noto'g'ri javob keldi.")
         else:
-            # Muammo bo'lsa Google qaytargan aniq xatolik matnini ko'rsatish
             err_msg = res_data.get("error", {}).get("message", "Noma'lum xatolik")
             await update.message.reply_text(f"⚠️ Google API xatoligi: {err_msg}")
 
     except Exception as e:
         print(f"API ERROR: {e}")
-        await update.message.reply_text(f"⚠️ Texnik xatolik yuz berdi: {str(e)[:50]}")
+        await update.message.reply_text(f"⚠️ Texnik xatolik: {str(e)[:60]}")
 
 # ====================================
 # VEB SERVERNI ALOHIDA OQIMDA ISHGA TUSHIRISH
@@ -205,17 +220,15 @@ def start_flask():
     app_web.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
 
 # ====================================
-# MAIN (BOTNI YOQISH)
+# MAIN
 # ====================================
 def main():
     if not BOT_TOKEN:
-        print("🔴 Xatolik: TELEGRAM_BOT_TOKEN muhit o'zgaruvchisi topilmadi!")
+        print("🔴 Xatolik: TELEGRAM_BOT_TOKEN topilmadi!")
         return
 
-    # Render o'chib qolmasligi uchun Flask veb-serverini alohida oqimda yoqamiz
     flask_thread = Thread(target=start_flask, daemon=True)
     flask_thread.start()
-    print("🚀 Flask veb-server orqa fonda ishga tushdi")
 
     app = (
         ApplicationBuilder()
