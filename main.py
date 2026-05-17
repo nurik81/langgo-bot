@@ -18,10 +18,11 @@ from telegram.ext import (
 )
 
 # ====================================
-# TOKENLAR
+# TOKENLAR (Render tizimidan xavfsiz o'qiladi)
 # ====================================
-BOT_TOKEN = "8649876958:AAGSsc0NR53FBf-6lCOr_u2XAHP1ZGh9JA4"
-GEMINI_KEY = "AIzaSyA8d5erXLy-k6Y6eNLZvZ5O9RI14vkkWPY"
+# Kod ichiga token yozmang! Ularni Render paneli (Environment) orqali kiritasiz.
+BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
+GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
 # ====================================
 # GEMINI AI
@@ -178,11 +179,17 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
 """
 
     try:
+        # Tokenlar mavjudligini tekshirish
+        if not BOT_TOKEN or not GEMINI_KEY:
+            await update.message.reply_text("⚠️ Server sozlamalarida xatolik: Tokenlar topilmadi!")
+            return
+
         # Gemini so'rovini xavfsiz alohida oqimga (to_thread) o'tkazamiz
         response = await asyncio.to_thread(model.generate_content, prompt)
-        ai_text = response.text
-
-        if not ai_text:
+        
+        if response and hasattr(response, 'text'):
+            ai_text = response.text
+        else:
             ai_text = "⚠️ AI hozircha javob bera olmadi. Keyinroq qayta urinib ko‘ring."
 
         await update.message.reply_text(ai_text)
@@ -197,7 +204,10 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
 # MAIN
 # ====================================
 def main():
-    # Bu yerdagi port talashayotgan Thread qismlari olib tashlandi
+    if not BOT_TOKEN:
+        print("🔴 Xatolik: TELEGRAM_BOT_TOKEN muhit o'zgaruvchisi o'rnatilmagan!")
+        return
+
     app = (
         ApplicationBuilder()
         .token(BOT_TOKEN)
