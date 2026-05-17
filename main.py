@@ -20,7 +20,6 @@ from telegram.ext import (
 # ====================================
 # TOKENLAR (Render tizimidan xavfsiz o'qiladi)
 # ====================================
-# Kod ichiga token yozmang! Ularni Render paneli (Environment) orqali kiritasiz.
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
@@ -61,7 +60,7 @@ Foydalanuvchi fan yuzasidan savol yoki mavzu yuborganida:
 UMUMIY USLUBIY QOIDALAR:
 ======================================
 - Foydalanuvchiga doim hurmat bilan "Siz" deb murojaat qiling.
-- Haqiqiy jonli ustoz muhitini yarating, lekin emojilarni juda kam va faqat kerakli o'rinlarda ishlating.
+- Haqiqiy jonli ustoz muhitini yarating, lekin emojilarni juda kam va faqat kerakli o'rinzada ishlating.
 - Agar foydalanuvchi rasm yuborsa ham, ushbu qoidalar doirasida rasm ichidagi savolni tushuntirib, yo'l ko'rsating, lekin yakuniy javobni yozmang.
 """
 
@@ -71,7 +70,7 @@ model = genai.GenerativeModel(
 )
 
 # ====================================
-# WEB SERVER (Gunicorn uchun xavfsiz holatda)
+# WEB SERVER
 # ====================================
 app_web = Flask(__name__)
 
@@ -150,7 +149,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # Fan yoki til tanlanganini aniqlash (Faqat tugma bosilganda saqlaydi)
+    # Fan yoki til tanlanganini aniqlash
     subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
     
     is_subject_button = any(s.lower() in text.lower() for s in subjects) and (
@@ -179,12 +178,11 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
 """
 
     try:
-        # Tokenlar mavjudligini tekshirish
         if not BOT_TOKEN or not GEMINI_KEY:
             await update.message.reply_text("⚠️ Server sozlamalarida xatolik: Tokenlar topilmadi!")
             return
 
-        # Gemini so'rovini xavfsiz alohida oqimga (to_thread) o'tkazamiz
+        # DIQQAT: Xavfsiz, qotib qolmaydigan asinxron oqim!
         response = await asyncio.to_thread(model.generate_content, prompt)
         
         if response and hasattr(response, 'text'):
@@ -201,12 +199,24 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
         )
 
 # ====================================
+# VEB SERVERNI ALOHIDA OQIMDA ISHGA TUSHIRISH
+# ====================================
+def start_flask():
+    port = int(os.environ.get("PORT", 10000))
+    app_web.run(host="0.0.0.0", port=port, debug=False, use_reloader=False)
+
+# ====================================
 # MAIN
 # ====================================
 def main():
     if not BOT_TOKEN:
-        print("🔴 Xatolik: TELEGRAM_BOT_TOKEN muhit o'zgaruvchisi o'rnatilmagan!")
+        print("🔴 Xatolik: TELEGRAM_BOT_TOKEN muhit o'zgaruvchisi topilmadi!")
         return
+
+    # Flask veb-serverini alohida fondagi oqimda yoqamiz (Port talashmaydi)
+    flask_thread = Thread(target=start_flask, daemon=True)
+    flask_thread.start()
+    print("🚀 Flask veb-server orqa fonda ishga tushdi")
 
     app = (
         ApplicationBuilder()
@@ -221,4 +231,5 @@ def main():
     app.run_polling()
 
 if __name__ == "__main__":
+    from threading import Thread
     main()
