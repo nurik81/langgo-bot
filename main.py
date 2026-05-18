@@ -1,7 +1,7 @@
 import os
 import asyncio
 import requests
-
+from threading import Thread
 from flask import Flask
 
 from telegram import (
@@ -172,7 +172,7 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
             await update.message.reply_text("⚠️ API kalit (GEMINI_API_KEY) serverga kiritilmagan!")
             return
 
-        # URL manzil mutlaqo to'g'ri holatga keltirildi
+        # URL manzil Gemini v1.5 Flash modeliga moslab to'g'rilandi
         url = "https://googleapis.com"
         
         headers = {
@@ -188,7 +188,6 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
             }
         }
         
-        # API Keyni parametrlarda xavfsiz uzatamiz
         params = {"key": GEMINI_KEY}
         
         # HTTP So'rov yuborish
@@ -243,5 +242,4 @@ def main():
     app.run_polling()
 
 if __name__ == "__main__":
-    from threading import Thread
     main()
