@@ -103,6 +103,8 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "professional tarzda o‘rganishingiz mumkin.\n\n"
         "📌 Kerakli bo‘limni tanlang:"
     )
+    # Yangi start bo'lganda kontekstni tozalaymiz
+    context.user_data.clear()
 
     await update.message.reply_text(
         welcome_text,
@@ -124,8 +126,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if update.message.photo:
         is_photo = True
         text = update.message.caption.strip() if update.message.caption else ""
-        
-        # Eng yuqori sifatli rasmni yuklab olish
         photo_file = await update.message.photo[-1].get_file()
         photo_bytes = await photo_file.download_as_bytearray()
     
@@ -163,6 +163,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if is_subject_button:
             context.user_data["subject"] = text
+            context.user_data["history"] = []  # Yangi yo'nalishda tarixni tozalash
             await update.message.reply_text(
                 f"✅ {text} bo‘limi tanlandi.\n\n"
                 "📩 Endi savolingizni matn yoki rasm ko‘rinishida yuboring."
@@ -175,16 +176,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("⚠️ Iltimos, avval menyudan biror bir til yoki fanni tanlang!")
         return
 
-    # Agar rasm bo'lsa-yu matn bo'lmasa, standart eslatma qo'shamiz
     if is_photo and not text:
         text = "Ushbu rasm ichidagi topshiriq yoki savolni tushuntirib bering."
 
-    prompt = f"""
-Tanlangan fan/yo'nalish: {subject}
-Foydalanuvchi yuborgan matn yoki savol: {text}
-
-Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat'iy amal qiling! Rasmdagi savolga javob berishda yakuniy yechimni aytmang, yo'nalish bering.
-"""
+    # Xotira tarixini yuklash (Maksimal oxirgi 10 ta xabarni saqlaydi)
+    if "history" not in context.user_data:
+        context.user_data["history"] = []
+    
+    chat_history = context.user_data["history"]
 
     try:
         if not GEMINI_KEY:
@@ -192,31 +191,39 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
             return
 
         url = "https://googleapis.com"
+        headers = {"Content-Type": "application/json"}
         
-        headers = {
-            "Content-Type": "application/json"
-        }
+        # Gemini API strukturasiga mos tarkib tayyorlash
+        contents_payload = []
         
-        # Gemini API uchun payload tuzilmasi
-        parts_payload = []
-        
-        # Agar rasm bo'lsa base64 ko'rinishida qo'shamiz
+        # 1. Eski suhbatlar tarixini payloadga tizish
+        for hist in chat_history:
+            contents_payload.append({
+                "role": hist["role"],
+                "parts": [{"text": hist["text"]}]
+            })
+            
+        # 2. Joriy yangi so'rov tarkibi
+        current_parts = []
         if is_photo and photo_bytes:
             base64_image = base64.b64encode(photo_bytes).decode('utf-8')
-            parts_payload.append({
+            current_parts.append({
                 "inlineData": {
                     "mimeType": "image/jpeg",
                     "data": base64_image
                 }
             })
-            
-        # Matnli promptni qo'shamiz
-        parts_payload.append({"text": prompt})
+        
+        prompt_text = f"Tanlangan fan/yo'nalish: {subject}\nFoydalanuvchi murojaati: {text}"
+        current_parts.append({"text": prompt_text})
+        
+        contents_payload.append({
+            "role": "user",
+            "parts": current_parts
+        })
         
         payload = {
-            "contents": [{
-                "parts": parts_payload
-            }],
+            "contents": contents_payload,
             "systemInstruction": {
                 "parts": [{"text": SYSTEM_INSTRUCTION}]
             }
@@ -224,7 +231,6 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
         
         params = {"key": GEMINI_KEY}
         
-        # APIga so'rov yuborish
         response = await asyncio.to_thread(requests.post, url, json=payload, headers=headers, params=params, timeout=30)
         res_data = response.json()
 
@@ -233,6 +239,15 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
                 parts = res_data["candidates"][0].get("content", {}).get("parts", [])
                 if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
+                    
+                    # Tarixga yangi suhbatni yozib qo'yish (Faqat matn qismlari eslab qolinadi)
+                    chat_history.append({"role": "user", "text": f"Savol: {text}"})
+                    chat_history.append({"role": "model", "text": ai_text})
+                    
+                    # Tarix juda uzayib ketmasligi uchun oxirgi 12 ta xabarni qoldiramiz
+                    if len(chat_history) > 12:
+                        context.user_data["history"] = chat_history[-12:]
+                    
                     await update.message.reply_text(ai_text)
                     return
             
@@ -243,7 +258,7 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
 
     except Exception as e:
         print(f"API ERROR: {e}")
-        await update.message.reply_text(f"⚠️ Texnik xatolik yuz berdi.")
+        await update.message.reply_text("⚠️ Texnik xatolik yuz berdi.")
 
 # ====================================
 # VEB SERVERNI ALOHIDA OQIMDA ISHGA TUSHIRISH
@@ -270,7 +285,6 @@ def main():
     )
 
     app.add_handler(CommandHandler("start", start))
-    # Matn va Rasmlarni bitta handlerga yo'naltiramiz
     app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_message))
 
     print("🚀 LangGo Academy Telegram Bot ishga tushdi")
