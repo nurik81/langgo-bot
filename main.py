@@ -103,7 +103,6 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "professional tarzda o‘rganishingiz mumkin.\n\n"
         "📌 Kerakli bo‘limni tanlang:"
     )
-    # Yangi start bo'lganda kontekstni tozalaymiz
     context.user_data.clear()
 
     await update.message.reply_text(
@@ -122,18 +121,15 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     is_photo = False
     photo_bytes = None
 
-    # Agar rasm yuborilgan bo'lsa
     if update.message.photo:
         is_photo = True
         text = update.message.caption.strip() if update.message.caption else ""
         photo_file = await update.message.photo[-1].get_file()
         photo_bytes = await photo_file.download_as_bytearray()
     
-    # Faqat matn yuborilgan bo'lsa
     elif update.message.text:
         text = update.message.text.strip()
 
-        # Navigatsiya menyulari
         if text == "🌍 Jahon tillari":
             await update.message.reply_text(
                 "🌍 Tilni tanlang:",
@@ -155,7 +151,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # Fan yoki til tanlanganini aniqlash
         subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
         is_subject_button = any(s.lower() in text.lower() for s in subjects) and (
             "tili" in text.lower() or any(text == btn for row in science_menu for btn in row)
@@ -163,14 +158,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if is_subject_button:
             context.user_data["subject"] = text
-            context.user_data["history"] = []  # Yangi yo'nalishda tarixni tozalash
+            context.user_data["history"] = []
             await update.message.reply_text(
                 f"✅ {text} bo‘limi tanlandi.\n\n"
                 "📩 Endi savolingizni matn yoki rasm ko‘rinishida yuboring."
             )
             return
 
-    # Bo'lim tanlanganini tekshirish
     subject = context.user_data.get("subject")
     if not subject:
         await update.message.reply_text("⚠️ Iltimos, avval menyudan biror bir til yoki fanni tanlang!")
@@ -179,7 +173,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if is_photo and not text:
         text = "Ushbu rasm ichidagi topshiriq yoki savolni tushuntirib bering."
 
-    # Xotira tarixini yuklash (Maksimal oxirgi 10 ta xabarni saqlaydi)
     if "history" not in context.user_data:
         context.user_data["history"] = []
     
@@ -193,17 +186,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         url = "https://googleapis.com"
         headers = {"Content-Type": "application/json"}
         
-        # Gemini API strukturasiga mos tarkib tayyorlash
         contents_payload = []
         
-        # 1. Eski suhbatlar tarixini payloadga tizish
         for hist in chat_history:
             contents_payload.append({
                 "role": hist["role"],
                 "parts": [{"text": hist["text"]}]
             })
             
-        # 2. Joriy yangi so'rov tarkibi
         current_parts = []
         if is_photo and photo_bytes:
             base64_image = base64.b64encode(photo_bytes).decode('utf-8')
@@ -236,15 +226,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         if response.status_code == 200:
             if "candidates" in res_data and len(res_data["candidates"]) > 0:
-                parts = res_data["candidates"][0].get("content", {}).get("parts", [])
+                content_obj = res_data["candidates"][0].get("content", {})
+                parts = content_obj.get("parts", [])
+                
+                # PARSLASH QISMI TO'LIQ TUZATILDI: parts[0]["text"] ko'rinishida olindi
                 if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
                     
-                    # Tarixga yangi suhbatni yozib qo'yish (Faqat matn qismlari eslab qolinadi)
                     chat_history.append({"role": "user", "text": f"Savol: {text}"})
                     chat_history.append({"role": "model", "text": ai_text})
                     
-                    # Tarix juda uzayib ketmasligi uchun oxirgi 12 ta xabarni qoldiramiz
                     if len(chat_history) > 12:
                         context.user_data["history"] = chat_history[-12:]
                     
