@@ -197,7 +197,7 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
         if response.status_code == 200:
             if "candidates" in res_data and len(res_data["candidates"]) > 0:
                 parts = res_data["candidates"][0].get("content", {}).get("parts", [])
-                if parts and "text" in parts[0]:
+                if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
                     await update.message.reply_text(ai_text)
                     return
