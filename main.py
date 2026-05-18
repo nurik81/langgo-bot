@@ -56,7 +56,7 @@ Foydalanuvchi fan yuzasidan savol yoki maven yuborganida:
 UMUMIY USLUBIY QOIDALAR:
 ======================================
 - Foydalanuvchiga doim hurmat bilan "Siz" deb murojaat qiling.
-- Haqiqiy jonli ustoz muhitini yarating, lekin emojilarni juda kam va faqat kerakli o'rinzada ishlating.
+- Haqiqiy jonli ustoz muhitini yarating, lekin emojilarni juda kam va faqat kerakli o'rinlarda ishlating.
 - Agar foydalanuvchi rasm yuborsa ham, ushbu qoidalar doirasida rasm ichidagi savolni tushuntirib, yo'l ko'rsating, lekin yakuniy javobni yozmang.
 """
 
@@ -229,7 +229,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 content_obj = res_data["candidates"][0].get("content", {})
                 parts = content_obj.get("parts", [])
                 
-                # PARSLASH TO'LIQ VA BENUQSON TO'G'RILANDI: parts[0]["text"] ko'rinishida olindi
+                # PARSLASH TO'LIQ TUZATILDI: parts[0]["text"] shakliga keltirildi
                 if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
                     
