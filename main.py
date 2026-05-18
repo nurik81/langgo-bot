@@ -172,7 +172,6 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
             await update.message.reply_text("⚠️ API kalit (GEMINI_API_KEY) serverga kiritilmagan!")
             return
 
-        # URL manzil Gemini v1.5 Flash modeliga moslab to'g'rilandi
         url = "https://googleapis.com"
         
         headers = {
@@ -190,13 +189,13 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
         
         params = {"key": GEMINI_KEY}
         
-        # HTTP So'rov yuborish
         response = await asyncio.to_thread(requests.post, url, json=payload, headers=headers, params=params, timeout=25)
         res_data = response.json()
 
         if response.status_code == 200:
             if "candidates" in res_data and len(res_data["candidates"]) > 0:
                 parts = res_data["candidates"][0].get("content", {}).get("parts", [])
+                # JSON strukturasi to'g'ri parslash holatiga keltirildi
                 if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
                     await update.message.reply_text(ai_text)
