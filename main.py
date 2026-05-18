@@ -1,5 +1,6 @@
 import os
 import asyncio
+import base64
 import requests
 from threading import Thread
 from flask import Flask
@@ -112,59 +113,77 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 # ====================================
-# HANDLE MESSAGE
+# HANDLE MESSAGE & PHOTO
 # ====================================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.strip()
+    text = ""
+    is_photo = False
+    photo_bytes = None
 
-    # Navigatsiya menyulari
-    if text == "🌍 Jahon tillari":
-        await update.message.reply_text(
-            "🌍 Tilni tanlang:",
-            reply_markup=ReplyKeyboardMarkup(languages_menu, resize_keyboard=True)
-        )
-        return
-
-    if text == "🔢 Aniq fanlar":
-        await update.message.reply_text(
-            "📚 Fanni tanlang:",
-            reply_markup=ReplyKeyboardMarkup(science_menu, resize_keyboard=True)
-        )
-        return
-
-    if text == "⬅️ Orqaga":
-        await update.message.reply_text(
-            "🏠 Asosiy menyu:",
-            reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True)
-        )
-        return
-
-    # Fan yoki til tanlanganini aniqlash
-    subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
+    # Agar rasm yuborilgan bo'lsa
+    if update.message.photo:
+        is_photo = True
+        text = update.message.caption.strip() if update.message.caption else ""
+        
+        # Eng yuqori sifatli rasmni yuklab olish
+        photo_file = await update.message.photo[-1].get_file()
+        photo_bytes = await photo_file.download_as_bytearray()
     
-    is_subject_button = any(s.lower() in text.lower() for s in subjects) and (
-        "tili" in text.lower() or any(text == btn for row in science_menu for btn in row)
-    )
+    # Faqat matn yuborilgan bo'lsa
+    elif update.message.text:
+        text = update.message.text.strip()
 
-    if is_subject_button:
-        context.user_data["subject"] = text
-        await update.message.reply_text(
-            f"✅ {text} bo‘limi tanlandi.\n\n"
-            "📩 Endi savolingizni yuboring."
+        # Navigatsiya menyulari
+        if text == "🌍 Jahon tillari":
+            await update.message.reply_text(
+                "🌍 Tilni tanlang:",
+                reply_markup=ReplyKeyboardMarkup(languages_menu, resize_keyboard=True)
+            )
+            return
+
+        if text == "🔢 Aniq fanlar":
+            await update.message.reply_text(
+                "📚 Fanni tanlang:",
+                reply_markup=ReplyKeyboardMarkup(science_menu, resize_keyboard=True)
+            )
+            return
+
+        if text == "⬅️ Orqaga":
+            await update.message.reply_text(
+                "🏠 Asosiy menyu:",
+                reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True)
+            )
+            return
+
+        # Fan yoki til tanlanganini aniqlash
+        subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
+        is_subject_button = any(s.lower() in text.lower() for s in subjects) and (
+            "tili" in text.lower() or any(text == btn for row in science_menu for btn in row)
         )
-        return
 
-    # Foydalanuvchi savol yuborganda tekshirish
+        if is_subject_button:
+            context.user_data["subject"] = text
+            await update.message.reply_text(
+                f"✅ {text} bo‘limi tanlandi.\n\n"
+                "📩 Endi savolingizni matn yoki rasm ko‘rinishida yuboring."
+            )
+            return
+
+    # Bo'lim tanlanganini tekshirish
     subject = context.user_data.get("subject")
     if not subject:
         await update.message.reply_text("⚠️ Iltimos, avval menyudan biror bir til yoki fanni tanlang!")
         return
 
+    # Agar rasm bo'lsa-yu matn bo'lmasa, standart eslatma qo'shamiz
+    if is_photo and not text:
+        text = "Ushbu rasm ichidagi topshiriq yoki savolni tushuntirib bering."
+
     prompt = f"""
 Tanlangan fan/yo'nalish: {subject}
 Foydalanuvchi yuborgan matn yoki savol: {text}
 
-Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat'iy amal qiling!
+Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat'iy amal qiling! Rasmdagi savolga javob berishda yakuniy yechimni aytmang, yo'nalish bering.
 """
 
     try:
@@ -178,9 +197,25 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
             "Content-Type": "application/json"
         }
         
+        # Gemini API uchun payload tuzilmasi
+        parts_payload = []
+        
+        # Agar rasm bo'lsa base64 ko'rinishida qo'shamiz
+        if is_photo and photo_bytes:
+            base64_image = base64.b64encode(photo_bytes).decode('utf-8')
+            parts_payload.append({
+                "inlineData": {
+                    "mimeType": "image/jpeg",
+                    "data": base64_image
+                }
+            })
+            
+        # Matnli promptni qo'shamiz
+        parts_payload.append({"text": prompt})
+        
         payload = {
             "contents": [{
-                "parts": [{"text": prompt}]
+                "parts": parts_payload
             }],
             "systemInstruction": {
                 "parts": [{"text": SYSTEM_INSTRUCTION}]
@@ -189,13 +224,13 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
         
         params = {"key": GEMINI_KEY}
         
-        response = await asyncio.to_thread(requests.post, url, json=payload, headers=headers, params=params, timeout=25)
+        # APIga so'rov yuborish
+        response = await asyncio.to_thread(requests.post, url, json=payload, headers=headers, params=params, timeout=30)
         res_data = response.json()
 
         if response.status_code == 200:
             if "candidates" in res_data and len(res_data["candidates"]) > 0:
                 parts = res_data["candidates"][0].get("content", {}).get("parts", [])
-                # JSON strukturasi to'g'ri parslash holatiga keltirildi
                 if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
                     await update.message.reply_text(ai_text)
@@ -208,7 +243,7 @@ Eslatma: 'SYSTEM_INSTRUCTION' ichidagi o'z bo'limingizga tegishli qoidalarga qat
 
     except Exception as e:
         print(f"API ERROR: {e}")
-        await update.message.reply_text(f"⚠️ Texnik xatolik: {str(e)[:60]}")
+        await update.message.reply_text(f"⚠️ Texnik xatolik yuz berdi.")
 
 # ====================================
 # VEB SERVERNI ALOHIDA OQIMDA ISHGA TUSHIRISH
@@ -235,7 +270,8 @@ def main():
     )
 
     app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+    # Matn va Rasmlarni bitta handlerga yo'naltiramiz
+    app.add_handler(MessageHandler((filters.TEXT | filters.PHOTO) & ~filters.COMMAND, handle_message))
 
     print("🚀 LangGo Academy Telegram Bot ishga tushdi")
     app.run_polling()
