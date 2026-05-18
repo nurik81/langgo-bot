@@ -229,7 +229,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 content_obj = res_data["candidates"][0].get("content", {})
                 parts = content_obj.get("parts", [])
                 
-                # PARSLASH TO'LIQ TUZATILDI: Ro'yxat elementining ichidan matn to'g'ri olindi
+                # PARSLASH ENG TO'G'RI VA XATOSIZ HOLATGA KELTIRILDI
                 if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
                     
