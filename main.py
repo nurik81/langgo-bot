@@ -5,11 +5,8 @@ import requests
 from threading import Thread
 from flask import Flask
 
-from telegram import (
-    Update,
-    ReplyKeyboardMarkup
-)
-
+from telegram import Update, ReplyKeyboardMarkup
+from telegram.constants import ChatAction
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -19,49 +16,67 @@ from telegram.ext import (
 )
 
 # ====================================
-# TOKENLAR (Render tizimidan o'qiladi)
+# TOKENLAR
 # ====================================
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
+# ====================================
+# AI SYSTEM (BIRLASHTIRILGAN)
+# ====================================
 SYSTEM_INSTRUCTION = """
-Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual virtual ustozisiz.
-Sizning maqsadianiz foydalanuvchiga tayyor javobni berish emas, balki uni fikrlashga majbur qilish va yo'naltirishdir.
+Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual ustozisiz.
+
+Sizning asosiy maqsadingiz — foydalanuvchiga tayyor javob berish emas, balki uni fikrlashga majbur qilish va yo'naltirishdir.
 
 ======================================
-QAT'IY METODIK MAJBURIYATLARINGIZ:
+1. TILLAR BO'LIMI
 ======================================
 
-1. JAHON TILLARI BO'LIMI (Ingliz, Nemis, Rus, Turk tillari):
-Siz ushbu tillarni mukammal bilasiz. Foydalanuvchi murojaat qilganda faqat quyidagi 2 ta holat bo'yicha javob bering:
+Agar BIR SO‘Z yuborilsa:
+- Tarjima
+- 1 misol gap
+- Tarjima
 
-   A. Agar foydalanuvchi FAQAT BITTA SO'Z yuborsa (Masalan: "olma", "kitob", "qalam"):
-      - Shu so'zning foydalanuvchi tanlagan tildagi to'g'ri tarjimasini (artikli yoki o'ziga xos xususiyatlari bilan) yozing.
-      - Shu so'z qatnashgan bitta chiroyli va tushunarli MISOL GAP (ustozlar darajasida) tuzing va uning o'zbekcha tarjimasini bering.
-      - Ortqicha gap yozmang, qisqa va lo'nda bo'ling.
-
-   B. Agar foydalanuvchi GRAMMATIK SAVOL so'rasa (Masalan: "Akkusativ nima", "Present Simple haqida tushuntir"):
-      - Grammatik qoidani o'ta professional, sodda va to'liq tushuntirib bering.
-      - Tushuntirish tugagach, gapni qat'iy ravishda mana shu gap bilan yakunlang:
-        "Ushbu grammatik qoida bo'yicha mana shu o'zbekcha gapni tarjima qiling, men tekshirib beraman: [SHU YERGA MAVZUGA OID BITTA O'ZBEKCHA GAPNI YOZING]"
-
-2. ANIQ VA TABIIY FANLAR BO'LIMI (Matematika, Fizika, Kimyo, Biologiya, Adabiyot, Ona tili):
-Foydalanuvchi fan yuzasidan savol yoki mavzu yuborganida:
-   - Hech qachon yakuniy javobni, tayyor yechimni yoki variantni aytmang.
-   - Mavzuning mohiyatini, formulasini yoki teoriyasini professional tarzda tushuntiring.
-   - Mavzuga doir to'liq yechilgan BITTA MISOL (namuna) ko'rsating.
-   - Foydalanuvchi o'zi mustaqil fikrlashi uchun BITTA SAVOL yoki MASALA bering va undan javobni kuting.
+Agar GRAMMATIKA so‘ralsa:
+- Tushuntirish
+- 3+ misol
+- Mashq berish
 
 ======================================
-UMUMIY USLUBIY QOIDALAR:
+2. ANIQ FANLAR
 ======================================
-- Foydalanuvchiga doim hurmat bilan "Siz" deb murojaat qiling.
-- Haqiqiy jonli ustoz muhitini yarating, lekin emojilarni juda kam va faqat kerakli o'rinlarda ishlating.
-- Agar foydalanuvchi rasm yuborsa ham, ushbu qoidalar doirasida rasm ichidagi savolni tushuntirib, yo'l ko'rsating, lekin yakuniy javobni yozmang.
+
+- To‘g‘ridan-to‘g‘ri javob bermang
+- Tushuntiring
+- Formula izohlang
+- 1 misol ishlang
+- 1 masala bering
+
+======================================
+3. SPEAKING & WRITING
+======================================
+
+- IELTS ustozidek tekshiring
+- Grammar, vocabulary, structure tushuntiring
+
+======================================
+4. RASM
+======================================
+
+- Tahlil qiling
+- Yo‘l ko‘rsating
+- Final javobni bermang
+
+======================================
+USLUB:
+- “Siz” deb murojaat qiling
+- Ustoz kabi yozing
+- Professional ohang
 """
 
 # ====================================
-# WEB SERVER
+# FLASK
 # ====================================
 app_web = Flask(__name__)
 
@@ -94,477 +109,175 @@ science_menu = [
 # ====================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
-    welcome_text = (
-        "🎓 LangGo Academy platformasiga xush kelibsiz.\n\n"
-        "📚 Bu yerda siz:\n"
-        "• tillarni\n"
-        "• matematika va fizikani\n"
-        "• kimyo va biologiyani\n"
-        "• speaking va writingni\n"
-        "professional tarzda o‘rganishingiz mumkin.\n\n"
-        "📌 Kerakli bo‘limni tanlang:"
-    )
-
     context.user_data.clear()
 
+    text = (
+        "🎓 LangGo Academy ga xush kelibsiz.\n\n"
+        "📚 Tillar va fanlarni professional o‘rganing.\n\n"
+        "📌 Bo‘lim tanlang:"
+    )
+
     await update.message.reply_text(
-        welcome_text,
-        reply_markup=ReplyKeyboardMarkup(
-            main_menu,
-            resize_keyboard=True
-        )
+        text,
+        reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True)
     )
 
 # ====================================
-# HANDLE MESSAGE & PHOTO
+# GEMINI
+# ====================================
+async def ask_gemini(prompt, history, image_bytes=None):
+
+    url = (
+        "https://generativelanguage.googleapis.com/"
+        f"v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
+    )
+
+    contents = []
+
+    for item in history:
+        contents.append({
+            "role": item["role"],
+            "parts": [{"text": item["text"]}]
+        })
+
+    parts = []
+
+    if image_bytes:
+        parts.append({
+            "inlineData": {
+                "mimeType": "image/jpeg",
+                "data": base64.b64encode(image_bytes).decode()
+            }
+        })
+
+    parts.append({"text": prompt})
+
+    contents.append({
+        "role": "user",
+        "parts": parts
+    })
+
+    payload = {
+        "contents": contents,
+        "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+        "generationConfig": {
+            "temperature": 0.7,
+            "topP": 0.95,
+            "maxOutputTokens": 2048
+        }
+    }
+
+    response = await asyncio.to_thread(
+        requests.post,
+        url,
+        json=payload,
+        timeout=60
+    )
+
+    if response.status_code != 200:
+        return "API xatolik"
+
+    try:
+        return response.json()["candidates"][0]["content"]["parts"][0]["text"]
+    except:
+        return "AI javob bermadi"
+
+# ====================================
+# MESSAGE HANDLER
 # ====================================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = ""
-    is_photo = False
     photo_bytes = None
 
-    # ====================================
     # PHOTO
-    # ====================================
     if update.message.photo:
+        photo = update.message.photo[-1]
+        file = await photo.get_file()
+        photo_bytes = await file.download_as_bytearray()
 
-        is_photo = True
+        text = update.message.caption or "Rasmni tushuntiring"
 
-        text = (
-            update.message.caption.strip()
-            if update.message.caption
-            else ""
-        )
-
-        photo_file = await update.message.photo[-1].get_file()
-
-        photo_bytes = await photo_file.download_as_bytearray()
-
-    # ====================================
     # TEXT
-    # ====================================
     elif update.message.text:
-
         text = update.message.text.strip()
 
-        # ====================================
-        # MENULAR
-        # ====================================
         if text == "🌍 Jahon tillari":
-
             await update.message.reply_text(
-                "🌍 Tilni tanlang:",
-                reply_markup=ReplyKeyboardMarkup(
-                    languages_menu,
-                    resize_keyboard=True
-                )
+                "Til tanlang:",
+                reply_markup=ReplyKeyboardMarkup(languages_menu, resize_keyboard=True)
             )
-
             return
 
         if text == "🔢 Aniq fanlar":
-
             await update.message.reply_text(
-                "📚 Fanni tanlang:",
-                reply_markup=ReplyKeyboardMarkup(
-                    science_menu,
-                    resize_keyboard=True
-                )
+                "Fan tanlang:",
+                reply_markup=ReplyKeyboardMarkup(science_menu, resize_keyboard=True)
             )
-
             return
 
         if text == "⬅️ Orqaga":
-
             await update.message.reply_text(
-                "🏠 Asosiy menyu:",
-                reply_markup=ReplyKeyboardMarkup(
-                    main_menu,
-                    resize_keyboard=True
-                )
+                "Asosiy menyu:",
+                reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True)
             )
-
             return
 
-        # ====================================
-        # SUBJECT TANLASH
-        # ====================================
-        subjects = [
-            "Nemis",
-            "Ingliz",
-            "Rus",
-            "Turk",
-            "Matematika",
-            "Fizika",
-            "Kimyo",
-            "Biologiya",
-            "Adabiyot",
-            "Ona tili"
-        ]
+        subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya"]
 
-        is_subject_button = any(
-            s.lower() in text.lower()
-            for s in subjects
-        ) and (
-            "tili" in text.lower()
-            or any(
-                text == btn
-                for row in science_menu
-                for btn in row
-            )
-        )
-
-        if is_subject_button:
-
+        if any(s.lower() in text.lower() for s in subjects):
             context.user_data["subject"] = text
-
             context.user_data["history"] = []
-
-            await update.message.reply_text(
-                f"✅ {text} bo‘limi tanlandi.\n\n"
-                "📩 Endi savolingizni matn yoki rasm ko‘rinishida yuboring."
-            )
-
+            await update.message.reply_text("Bo‘lim tanlandi. Savol yuboring")
             return
 
-    # ====================================
-    # SUBJECT CHECK
-    # ====================================
     subject = context.user_data.get("subject")
 
     if not subject:
-
-        await update.message.reply_text(
-            "⚠️ Iltimos, avval menyudan biror bir til yoki fanni tanlang!"
-        )
-
+        await update.message.reply_text("Avval bo‘lim tanlang")
         return
 
-    # ====================================
-    # AGAR RASM BO'LSA
-    # ====================================
-    if is_photo and not text:
-
-        text = (
-            "Ushbu rasm ichidagi topshiriq yoki savolni tushuntirib bering."
-        )
-
-    # ====================================
-    # HISTORY
-    # ====================================
     if "history" not in context.user_data:
-
         context.user_data["history"] = []
 
-    chat_history = context.user_data["history"]
+    history = context.user_data["history"]
 
-    # ====================================
-    # GEMINI API
-    # ====================================
-    try:
+    final_prompt = f"Bo‘lim: {subject}\nSavol: {text}"
 
-        if not GEMINI_KEY:
+    await context.bot.send_chat_action(update.effective_chat.id, ChatAction.TYPING)
 
-            await update.message.reply_text(
-                "⚠️ API kalit (GEMINI_API_KEY) serverga kiritilmagan!"
-            )
+    answer = await ask_gemini(final_prompt, history, photo_bytes)
 
-            return
+    history.append({"role": "user", "text": text})
+    history.append({"role": "model", "text": answer})
 
-        # ====================================
-        # GEMINI URL
-        # ====================================
-        url = (
-            f"https://generativelanguage.googleapis.com/"
-            f"v1beta/models/gemini-1.5-flash:generateContent"
-            f"?key={GEMINI_KEY}"
-        )
+    context.user_data["history"] = history[-12:]
 
-        headers = {
-            "Content-Type": "application/json"
-        }
-
-        contents_payload = []
-
-        # ====================================
-        # HISTORY QO'SHISH
-        # ====================================
-        for hist in chat_history:
-
-            contents_payload.append({
-                "role": hist["role"],
-                "parts": [
-                    {
-                        "text": hist["text"]
-                    }
-                ]
-            })
-
-        # ====================================
-        # CURRENT MESSAGE
-        # ====================================
-        current_parts = []
-
-        # ====================================
-        # RASM
-        # ====================================
-        if is_photo and photo_bytes:
-
-            base64_image = base64.b64encode(
-                photo_bytes
-            ).decode("utf-8")
-
-            current_parts.append({
-                "inlineData": {
-                    "mimeType": "image/jpeg",
-                    "data": base64_image
-                }
-            })
-
-        # ====================================
-        # PROMPT
-        # ====================================
-        prompt_text = (
-            f"Tanlangan fan/yo'nalish: {subject}\n\n"
-            f"Foydalanuvchi murojaati:\n{text}"
-        )
-
-        current_parts.append({
-            "text": prompt_text
-        })
-
-        contents_payload.append({
-            "role": "user",
-            "parts": current_parts
-        })
-
-        # ====================================
-        # PAYLOAD
-        # ====================================
-        payload = {
-            "contents": contents_payload,
-
-            "systemInstruction": {
-                "parts": [
-                    {
-                        "text": SYSTEM_INSTRUCTION
-                    }
-                ]
-            },
-
-            "generationConfig": {
-                "temperature": 0.8,
-                "topP": 0.95,
-                "topK": 40,
-                "maxOutputTokens": 2048
-            }
-        }
-
-        # ====================================
-        # TYPING
-        # ====================================
-        await context.bot.send_chat_action(
-            chat_id=update.effective_chat.id,
-            action="typing"
-        )
-
-        # ====================================
-        # REQUEST
-        # ====================================
-        response = await asyncio.to_thread(
-            requests.post,
-            url,
-            json=payload,
-            headers=headers,
-            timeout=60
-        )
-
-        print("STATUS:", response.status_code)
-        print("RESPONSE:", response.text)
-
-        res_data = response.json()
-
-        # ====================================
-        # SUCCESS
-        # ====================================
-        if response.status_code == 200:
-
-            if (
-                "candidates" in res_data
-                and len(res_data["candidates"]) > 0
-            ):
-
-                content_obj = res_data["candidates"][0].get(
-                    "content",
-                    {}
-                )
-
-                parts = content_obj.get(
-                    "parts",
-                    []
-                )
-
-                if parts and len(parts) > 0:
-
-                    first_part = parts[0]
-
-                    if (
-                        isinstance(first_part, dict)
-                        and "text" in first_part
-                    ):
-
-                        ai_text = first_part["text"]
-
-                        # ====================================
-                        # HISTORY SAVE
-                        # ====================================
-                        chat_history.append({
-                            "role": "user",
-                            "text": f"Savol: {text}"
-                        })
-
-                        chat_history.append({
-                            "role": "model",
-                            "text": ai_text
-                        })
-
-                        # ====================================
-                        # LIMIT
-                        # ====================================
-                        if len(chat_history) > 12:
-
-                            context.user_data["history"] = (
-                                chat_history[-12:]
-                            )
-
-                        # ====================================
-                        # LONG MESSAGE
-                        # ====================================
-                        if len(ai_text) > 4096:
-
-                            for i in range(
-                                0,
-                                len(ai_text),
-                                4096
-                            ):
-
-                                await update.message.reply_text(
-                                    ai_text[i:i + 4096]
-                                )
-
-                        else:
-
-                            await update.message.reply_text(
-                                ai_text
-                            )
-
-                        return
-
-            await update.message.reply_text(
-                "⚠️ AI tuzilmasidan noto'g'ri javob keldi."
-            )
-
-        # ====================================
-        # API ERROR
-        # ====================================
-        else:
-
-            err_msg = res_data.get(
-                "error",
-                {}
-            ).get(
-                "message",
-                "Noma'lum xatolik"
-            )
-
-            await update.message.reply_text(
-                f"⚠️ Google API xatoligi:\n{err_msg}"
-            )
-
-    except Exception as e:
-
-        print(f"API ERROR: {e}")
-
-        await update.message.reply_text(
-            "⚠️ Texnik xatolik yuz berdi."
-        )
+    await update.message.reply_text(answer)
 
 # ====================================
-# VEB SERVER
+# FLASK
 # ====================================
-def start_flask():
-
-    port = int(
-        os.environ.get("PORT", 10000)
-    )
-
-    app_web.run(
-        host="0.0.0.0",
-        port=port,
-        debug=False,
-        use_reloader=False
-    )
+def run_flask():
+    app_web.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
 
 # ====================================
 # MAIN
 # ====================================
 def main():
 
-    if not BOT_TOKEN:
-
-        print(
-            "🔴 Xatolik: TELEGRAM_BOT_TOKEN topilmadi!"
-        )
-
+    if not BOT_TOKEN or not GEMINI_KEY:
+        print("Tokenlar yo‘q")
         return
 
-    if not GEMINI_KEY:
+    Thread(target=run_flask, daemon=True).start()
 
-        print(
-            "🔴 Xatolik: GEMINI_API_KEY topilmadi!"
-        )
+    app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-        return
+    app.add_handler(CommandHandler("start", start))
+    app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
 
-    # ====================================
-    # FLASK THREAD
-    # ====================================
-    flask_thread = Thread(
-        target=start_flask,
-        daemon=True
-    )
-
-    flask_thread.start()
-
-    # ====================================
-    # TELEGRAM BOT
-    # ====================================
-    app = (
-        ApplicationBuilder()
-        .token(BOT_TOKEN)
-        .build()
-    )
-
-    app.add_handler(
-        CommandHandler(
-            "start",
-            start
-        )
-    )
-
-    app.add_handler(
-        MessageHandler(
-            (filters.TEXT | filters.PHOTO)
-            & ~filters.COMMAND,
-            handle_message
-        )
-    )
-
-    print(
-        "🚀 LangGo Academy Telegram Bot ishga tushdi"
-    )
-
+    print("Bot ishga tushdi 🚀")
     app.run_polling()
 
 # ====================================
