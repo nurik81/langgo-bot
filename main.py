@@ -19,7 +19,7 @@ from telegram.ext import (
 )
 
 # ====================================
-# TOKENLAR (Render tizimidan o'qiladi)
+# TOKENLAR (Render tizimodan o'qiladi)
 # ====================================
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
@@ -183,7 +183,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ API kalit (GEMINI_API_KEY) serverga kiritilmagan!")
             return
 
-        # 🔥 TO'G'RILANDI: Gemini API uchun rasmiy va to'g'ri manzil kiritildi
         url = "https://googleapis.com"
         headers = {"Content-Type": "application/json"}
         
@@ -230,7 +229,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 content_obj = res_data["candidates"][0].get("content", {})
                 parts = content_obj.get("parts", [])
                 
-                # 🔥 TO'G'RILANDI: JSON strukturasi Gemini API standartiga moslab o'qildi
+                # 🔥 PARSLASH TUZATILDI: Standart ro'yxat (list) indeksatsiyasi aniq qilib yozildi
                 if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
                     
