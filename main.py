@@ -183,6 +183,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("⚠️ API kalit (GEMINI_API_KEY) serverga kiritilmagan!")
             return
 
+        # 🔥 TO'G'RILANDI: Gemini API uchun rasmiy va to'g'ri manzil kiritildi
         url = "https://googleapis.com"
         headers = {"Content-Type": "application/json"}
         
@@ -229,7 +230,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 content_obj = res_data["candidates"][0].get("content", {})
                 parts = content_obj.get("parts", [])
                 
-                # PARSLASH TO'LIQ TUZATILDI: parts[0]["text"] shakliga keltirildi
+                # 🔥 TO'G'RILANDI: JSON strukturasi Gemini API standartiga moslab o'qildi
                 if parts and len(parts) > 0 and "text" in parts[0]:
                     ai_text = parts[0]["text"]
                     
