@@ -25,7 +25,7 @@ BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
 SYSTEM_INSTRUCTION = """
-Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual ustozisiz.
+Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual virtual ustozisiz.
 Sizning maqsadianiz foydalanuvchiga tayyor javobni berish emas, balki uni fikrlashga majbur qilish va yo'naltirishdir.
 
 ======================================
@@ -229,10 +229,12 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 content_obj = res_data["candidates"][0].get("content", {})
                 parts = content_obj.get("parts", [])
                 
-                # 🔥 TUZATILDI: Ro'yxatdan matnni xavfsiz va xatosiz o'qish (try-exceptdan tashqarida sindirmaydi)
+                # 🔥 MUAFAQQIYATLI TUZATILDI: Ro'yxat (list) ichidagi 0-indeksli lug'atdan matn to'g'ri ajratib olindi
                 if parts and len(parts) > 0:
-                    ai_text = parts[0].get("text", "")
-                    if ai_text:
+                    first_part = parts[0]
+                    if isinstance(first_part, dict) and "text" in first_part:
+                        ai_text = first_part["text"]
+                        
                         chat_history.append({"role": "user", "text": f"Savol: {text}"})
                         chat_history.append({"role": "model", "text": ai_text})
                         
