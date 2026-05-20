@@ -19,7 +19,7 @@ from telegram.ext import (
 )
 
 # ====================================
-# TOKENLAR (Render tizimodan o'qiladi)
+# TOKENLAR (Render tizimidan o'qiladi)
 # ====================================
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
@@ -229,18 +229,20 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 content_obj = res_data["candidates"][0].get("content", {})
                 parts = content_obj.get("parts", [])
                 
-                # 🔥 PARSLASH TUZATILDI: Standart ro'yxat (list) indeksatsiyasi aniq qilib yozildi
-                if parts and len(parts) > 0 and "text" in parts[0]:
-                    ai_text = parts[0]["text"]
-                    
-                    chat_history.append({"role": "user", "text": f"Savol: {text}"})
-                    chat_history.append({"role": "model", "text": ai_text})
-                    
-                    if len(chat_history) > 12:
-                        context.user_data["history"] = chat_history[-12:]
-                    
-                    await update.message.reply_text(ai_text)
-                    return
+                # 🔥 MUTLAQO TUZATILDI: List ichidagi birinchi lug'atni indekslash to'g'ri bajarildi
+                if parts and len(parts) > 0:
+                    first_part = parts[0]
+                    if isinstance(first_part, dict) and "text" in first_part:
+                        ai_text = first_part["text"]
+                        
+                        chat_history.append({"role": "user", "text": f"Savol: {text}"})
+                        chat_history.append({"role": "model", "text": ai_text})
+                        
+                        if len(chat_history) > 12:
+                            context.user_data["history"] = chat_history[-12:]
+                        
+                        await update.message.reply_text(ai_text)
+                        return
             
             await update.message.reply_text("⚠️ AI tuzilmasidan noto'g'ri javob keldi.")
         else:
