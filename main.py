@@ -5,8 +5,13 @@ import requests
 from threading import Thread
 from flask import Flask
 
-from telegram import Update, ReplyKeyboardMarkup
+from telegram import (
+    Update,
+    ReplyKeyboardMarkup
+)
+
 from telegram.constants import ChatAction
+
 from telegram.ext import (
     ApplicationBuilder,
     CommandHandler,
@@ -22,57 +27,101 @@ BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
 # ====================================
-# AI SYSTEM (BIRLASHTIRILGAN)
+# AI SYSTEM
 # ====================================
 SYSTEM_INSTRUCTION = """
 Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual ustozisiz.
 
-Sizning asosiy maqsadingiz — foydalanuvchiga tayyor javob berish emas, balki uni fikrlashga majbur qilish va yo'naltirishdir.
+Sizning maqsadingiz foydalanuvchiga tayyor javobni berish emas, balki uni o‘qitish, tushuntirish va yo‘naltirishdir.
 
 ======================================
 1. TILLAR BO'LIMI
 ======================================
 
-Agar BIR SO‘Z yuborilsa:
-- Tarjima
-- 1 misol gap
-- Tarjima
+Siz:
+- Ingliz
+- Nemis
+- Rus
+- Turk
 
-Agar GRAMMATIKA so‘ralsa:
-- Tushuntirish
-- 3+ misol
-- Mashq berish
+tillarini professional darajada bilasiz.
+
+Agar foydalanuvchi:
+- bitta so‘z
+- so‘z birikmasi
+- gap
+- katta matn
+- ibora
+- idiom
+- slang
+- kundalik suhbat
+
+yuborsa:
+
+- uni tabiiy va professional tarjima qiling
+- so‘zma-so‘z emas, MA'NOSI bilan tarjima qiling
+- agar ibora yoki idiom bo‘lsa:
+  - asl ma'nosini tushuntiring
+  - qachon ishlatilishini ayting
+  - misol yozing
+
+Agar grammatika savoli bo‘lsa:
+- professional tushuntiring
+- kamida 3 ta misol yozing
+- tarjimasini yozing
+- mashq bering
+
+Agar writing yoki speaking yuborsa:
+- grammar
+- vocabulary
+- pronunciation
+- coherence
+- naturalness
+
+bo‘yicha professional feedback bering.
 
 ======================================
 2. ANIQ FANLAR
 ======================================
 
-- To‘g‘ridan-to‘g‘ri javob bermang
-- Tushuntiring
+- To‘g‘ridan-to‘g‘ri final javobni bermang
+- Mavzuni tushuntiring
 - Formula izohlang
-- 1 misol ishlang
-- 1 masala bering
+- Misol ishlang
+- Keyin mashq bering
+- Bosqichma-bosqich tushuntiring
 
 ======================================
-3. SPEAKING & WRITING
+3. SPEAKING VA WRITING
 ======================================
 
-- IELTS ustozidek tekshiring
-- Grammar, vocabulary, structure tushuntiring
+- IELTS ustozidek yordam bering
+- Writinglarni professional tekshiring
+- Speaking uchun tabiiy javob yozing
 
 ======================================
-4. RASM
+4. RASM YUBORILGANDA
 ======================================
 
-- Tahlil qiling
+- Rasm ichidagi savolni tushuntiring
 - Yo‘l ko‘rsating
 - Final javobni bermang
 
 ======================================
-USLUB:
-- “Siz” deb murojaat qiling
-- Ustoz kabi yozing
-- Professional ohang
+5. CHAT XOTIRASI
+======================================
+
+- Oldingi savollarni eslab qoling
+- Mavzularni bog‘lab davom ettiring
+
+======================================
+USLUB
+======================================
+
+- Doim “Siz” deb murojaat qiling
+- Professional ustozdek yozing
+- Juda ko‘p emoji ishlatmang
+- Motivatsion bo‘ling
 """
 
 # ====================================
@@ -85,7 +134,7 @@ def home():
     return "LangGo Academy ishlayapti 🚀"
 
 # ====================================
-# MENULAR
+# MENU
 # ====================================
 main_menu = [
     ['🌍 Jahon tillari', '🔢 Aniq fanlar']
@@ -112,54 +161,90 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     text = (
-        "🎓 LangGo Academy ga xush kelibsiz.\n\n"
-        "📚 Tillar va fanlarni professional o‘rganing.\n\n"
-        "📌 Bo‘lim tanlang:"
+        "🎓 LangGo Academy AI ustoz botiga xush kelibsiz.\n\n"
+        "📚 Siz bu bot orqali:\n"
+        "• tarjima\n"
+        "• grammatika\n"
+        "• speaking\n"
+        "• writing\n"
+        "• matematika va fanlar\n"
+        "• rasmli savollar\n"
+        "bo‘yicha professional yordam olishingiz mumkin.\n\n"
+        "📌 Kerakli bo‘limni tanlang:"
     )
 
     await update.message.reply_text(
         text,
-        reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True)
+        reply_markup=ReplyKeyboardMarkup(
+            main_menu,
+            resize_keyboard=True
+        )
     )
 
 # ====================================
-# GEMINI
+# GEMINI FUNCTION
 # ====================================
 async def ask_gemini(prompt, history, image_bytes=None):
 
     url = (
-        "https://generativelanguage.googleapis.com/"
-        f"v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
+        "https://generativelanguage.googleapis.com/v1beta/models/"
+        f"gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
     )
+
+    headers = {
+        "Content-Type": "application/json"
+    }
 
     contents = []
 
+    # HISTORY
     for item in history:
+
         contents.append({
             "role": item["role"],
-            "parts": [{"text": item["text"]}]
+            "parts": [
+                {
+                    "text": item["text"]
+                }
+            ]
         })
 
-    parts = []
+    current_parts = []
 
+    # IMAGE
     if image_bytes:
-        parts.append({
+
+        image_base64 = base64.b64encode(
+            image_bytes
+        ).decode("utf-8")
+
+        current_parts.append({
             "inlineData": {
                 "mimeType": "image/jpeg",
-                "data": base64.b64encode(image_bytes).decode()
+                "data": image_base64
             }
         })
 
-    parts.append({"text": prompt})
+    current_parts.append({
+        "text": prompt
+    })
 
     contents.append({
         "role": "user",
-        "parts": parts
+        "parts": current_parts
     })
 
     payload = {
         "contents": contents,
-        "systemInstruction": {"parts": [{"text": SYSTEM_INSTRUCTION}]},
+
+        "systemInstruction": {
+            "parts": [
+                {
+                    "text": SYSTEM_INSTRUCTION
+                }
+            ]
+        },
+
         "generationConfig": {
             "temperature": 0.7,
             "topP": 0.95,
@@ -167,23 +252,32 @@ async def ask_gemini(prompt, history, image_bytes=None):
         }
     }
 
-    response = await asyncio.to_thread(
-        requests.post,
-        url,
-        json=payload,
-        timeout=60
-    )
-
-    if response.status_code != 200:
-        return "API xatolik"
-
     try:
-        return response.json()["candidates"][0]["content"]["parts"][0]["text"]
-    except:
-        return "AI javob bermadi"
+
+        response = await asyncio.to_thread(
+            requests.post,
+            url,
+            headers=headers,
+            json=payload,
+            timeout=60
+        )
+
+        print("STATUS:", response.status_code)
+        print("RESPONSE:", response.text)
+
+        if response.status_code != 200:
+            return f"⚠️ API XATOLIK:\n{response.text}"
+
+        data = response.json()
+
+        return data["candidates"][0]["content"]["parts"][0]["text"]
+
+    except Exception as e:
+
+        return f"⚠️ TEXNIK XATOLIK:\n{str(e)}"
 
 # ====================================
-# MESSAGE HANDLER
+# HANDLE MESSAGE
 # ====================================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
@@ -192,92 +286,232 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # PHOTO
     if update.message.photo:
+
         photo = update.message.photo[-1]
+
         file = await photo.get_file()
+
         photo_bytes = await file.download_as_bytearray()
 
-        text = update.message.caption or "Rasmni tushuntiring"
+        text = (
+            update.message.caption.strip()
+            if update.message.caption
+            else "Rasm ichidagi savolni tushuntiring."
+        )
 
     # TEXT
     elif update.message.text:
+
         text = update.message.text.strip()
 
+        # MENU
         if text == "🌍 Jahon tillari":
+
             await update.message.reply_text(
-                "Til tanlang:",
-                reply_markup=ReplyKeyboardMarkup(languages_menu, resize_keyboard=True)
+                "🌍 Tilni tanlang:",
+                reply_markup=ReplyKeyboardMarkup(
+                    languages_menu,
+                    resize_keyboard=True
+                )
             )
             return
 
         if text == "🔢 Aniq fanlar":
+
             await update.message.reply_text(
-                "Fan tanlang:",
-                reply_markup=ReplyKeyboardMarkup(science_menu, resize_keyboard=True)
+                "📚 Fanni tanlang:",
+                reply_markup=ReplyKeyboardMarkup(
+                    science_menu,
+                    resize_keyboard=True
+                )
             )
             return
 
         if text == "⬅️ Orqaga":
+
             await update.message.reply_text(
-                "Asosiy menyu:",
-                reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True)
+                "🏠 Asosiy menyu:",
+                reply_markup=ReplyKeyboardMarkup(
+                    main_menu,
+                    resize_keyboard=True
+                )
             )
             return
 
-        subjects = ["Nemis", "Ingliz", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya"]
+        # SUBJECT
+        subjects = [
+            "Nemis",
+            "Ingliz",
+            "Rus",
+            "Turk",
+            "Matematika",
+            "Fizika",
+            "Kimyo",
+            "Biologiya",
+            "Adabiyot",
+            "Ona tili"
+        ]
 
-        if any(s.lower() in text.lower() for s in subjects):
+        is_subject = any(
+            s.lower() in text.lower()
+            for s in subjects
+        )
+
+        if is_subject:
+
             context.user_data["subject"] = text
             context.user_data["history"] = []
-            await update.message.reply_text("Bo‘lim tanlandi. Savol yuboring")
+
+            await update.message.reply_text(
+                f"✅ {text} bo‘limi tanlandi.\n\n"
+                "📩 Endi savolingizni yuboring."
+            )
+
             return
 
+    # SUBJECT CHECK
     subject = context.user_data.get("subject")
 
     if not subject:
-        await update.message.reply_text("Avval bo‘lim tanlang")
+
+        await update.message.reply_text(
+            "⚠️ Avval fan yoki til tanlang!"
+        )
+
         return
 
+    # HISTORY
     if "history" not in context.user_data:
         context.user_data["history"] = []
 
     history = context.user_data["history"]
 
-    final_prompt = f"Bo‘lim: {subject}\nSavol: {text}"
+    # FINAL PROMPT
+    final_prompt = (
+        f"Tanlangan bo‘lim: {subject}\n\n"
+        f"Foydalanuvchi savoli:\n{text}"
+    )
 
-    await context.bot.send_chat_action(update.effective_chat.id, ChatAction.TYPING)
+    try:
 
-    answer = await ask_gemini(final_prompt, history, photo_bytes)
+        if not GEMINI_KEY:
 
-    history.append({"role": "user", "text": text})
-    history.append({"role": "model", "text": answer})
+            await update.message.reply_text(
+                "⚠️ GEMINI_API_KEY topilmadi!"
+            )
 
-    context.user_data["history"] = history[-12:]
+            return
 
-    await update.message.reply_text(answer)
+        # TYPING
+        await context.bot.send_chat_action(
+            chat_id=update.effective_chat.id,
+            action=ChatAction.TYPING
+        )
+
+        # AI
+        answer = await ask_gemini(
+            prompt=final_prompt,
+            history=history,
+            image_bytes=photo_bytes
+        )
+
+        # SAVE HISTORY
+        history.append({
+            "role": "user",
+            "text": text
+        })
+
+        history.append({
+            "role": "model",
+            "text": answer
+        })
+
+        context.user_data["history"] = history[-12:]
+
+        # SEND
+        if len(answer) > 4096:
+
+            for i in range(0, len(answer), 4096):
+
+                await update.message.reply_text(
+                    answer[i:i + 4096]
+                )
+
+        else:
+
+            await update.message.reply_text(answer)
+
+    except Exception as e:
+
+        print("ERROR:", e)
+
+        await update.message.reply_text(
+            "⚠️ Texnik xatolik yuz berdi."
+        )
 
 # ====================================
-# FLASK
+# FLASK START
 # ====================================
 def run_flask():
-    app_web.run(host="0.0.0.0", port=int(os.environ.get("PORT", 10000)))
+
+    port = int(
+        os.environ.get("PORT", 10000)
+    )
+
+    app_web.run(
+        host="0.0.0.0",
+        port=port,
+        debug=False,
+        use_reloader=False
+    )
 
 # ====================================
 # MAIN
 # ====================================
 def main():
 
-    if not BOT_TOKEN or not GEMINI_KEY:
-        print("Tokenlar yo‘q")
+    if not BOT_TOKEN:
+
+        print("❌ TELEGRAM_BOT_TOKEN topilmadi")
         return
 
-    Thread(target=run_flask, daemon=True).start()
+    if not GEMINI_KEY:
 
-    app = ApplicationBuilder().token(BOT_TOKEN).build()
+        print("❌ GEMINI_API_KEY topilmadi")
+        return
 
-    app.add_handler(CommandHandler("start", start))
-    app.add_handler(MessageHandler(filters.TEXT | filters.PHOTO, handle_message))
+    # FLASK
+    flask_thread = Thread(
+        target=run_flask,
+        daemon=True
+    )
 
-    print("Bot ishga tushdi 🚀")
+    flask_thread.start()
+
+    # BOT
+    app = (
+        ApplicationBuilder()
+        .token(BOT_TOKEN)
+        .build()
+    )
+
+    app.add_handler(
+        CommandHandler(
+            "start",
+            start
+        )
+    )
+
+    app.add_handler(
+        MessageHandler(
+            (filters.TEXT | filters.PHOTO)
+            & ~filters.COMMAND,
+            handle_message
+        )
+    )
+
+    print("🚀 LangGo Academy ishga tushdi")
+
     app.run_polling()
 
 # ====================================
