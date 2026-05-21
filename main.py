@@ -162,7 +162,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
 
     text = (
-        "🎓 LangGo Academy AI ustoz botiga xush kelibsiz.\n\n"
+        "🎓 LangGo Academy platformasiga xush kelibsiz.\n\n"
         "📚 Bu bot:\n"
         "• tarjima qiladi\n"
         "• grammatika tushuntiradi\n"
@@ -186,7 +186,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def ask_gemini(prompt, history, image_bytes=None):
 
     url = (
-        "https://generativelanguage.googleapis.com/v1beta/models/"
+        "https://generativelanguage.googleapis.com/v1/models/"
         f"gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
     )
 
@@ -284,9 +284,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     text = ""
     photo_bytes = None
 
-    # =========================================
     # PHOTO
-    # =========================================
     if update.message.photo:
 
         photo = update.message.photo[-1]
@@ -301,9 +299,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else "Rasm ichidagi savolni tushuntiring."
         )
 
-    # =========================================
     # TEXT
-    # =========================================
     elif update.message.text:
 
         text = update.message.text.strip()
@@ -342,7 +338,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # SUBJECT TANLASH
+        # SUBJECT
         subjects = [
             "Nemis",
             "Ingliz",
@@ -373,9 +369,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
-    # =========================================
     # SUBJECT CHECK
-    # =========================================
     subject = context.user_data.get("subject")
 
     if not subject:
@@ -386,17 +380,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         return
 
-    # =========================================
     # HISTORY
-    # =========================================
     if "history" not in context.user_data:
         context.user_data["history"] = []
 
     history = context.user_data["history"]
 
-    # =========================================
     # FINAL PROMPT
-    # =========================================
     final_prompt = (
         f"Tanlangan bo‘lim: {subject}\n\n"
         f"Foydalanuvchi savoli:\n{text}"
@@ -418,7 +408,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             action=ChatAction.TYPING
         )
 
-        # AI JAVOB
+        # AI
         answer = await ask_gemini(
             prompt=final_prompt,
             history=history,
