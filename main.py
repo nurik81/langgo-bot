@@ -20,19 +20,19 @@ from telegram.ext import (
     ContextTypes
 )
 
-# ====================================
+# =========================================
 # TOKENLAR
-# ====================================
+# =========================================
 BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN")
 GEMINI_KEY = os.environ.get("GEMINI_API_KEY")
 
-# ====================================
+# =========================================
 # AI SYSTEM
-# ====================================
+# =========================================
 SYSTEM_INSTRUCTION = """
 Siz 'LangGo Academy' platformasining professional, bilimdon va strategik virtual ustozisiz.
 
-Sizning maqsadingiz foydalanuvchiga tayyor javobni berish emas, balki uni o‘qitish, tushuntirish va yo‘naltirishdir.
+Sizning vazifangiz foydalanuvchiga tayyor javobni berish emas, balki uni o‘qitish, tushuntirish va yo‘naltirishdir.
 
 ======================================
 1. TILLAR BO'LIMI
@@ -58,23 +58,25 @@ Agar foydalanuvchi:
 
 yuborsa:
 
-- uni tabiiy va professional tarjima qiling
-- so‘zma-so‘z emas, MA'NOSI bilan tarjima qiling
-- agar ibora yoki idiom bo‘lsa:
-  - asl ma'nosini tushuntiring
-  - qachon ishlatilishini ayting
-  - misol yozing
+- tabiiy tarjima qiling
+- ma'nosi bilan tushuntiring
+- kerak bo‘lsa grammatik izoh bering
+- misol yozing
+
+Agar idiom yoki ibora bo‘lsa:
+- asl ma'nosini tushuntiring
+- qachon ishlatilishini ayting
+- misol yozing
 
 Agar grammatika savoli bo‘lsa:
 - professional tushuntiring
 - kamida 3 ta misol yozing
 - tarjimasini yozing
-- mashq bering
+- oxirida mashq bering
 
-Agar writing yoki speaking yuborsa:
+Agar speaking yoki writing yuborsa:
 - grammar
 - vocabulary
-- pronunciation
 - coherence
 - naturalness
 
@@ -85,8 +87,8 @@ bo‘yicha professional feedback bering.
 ======================================
 
 - To‘g‘ridan-to‘g‘ri final javobni bermang
-- Mavzuni tushuntiring
-- Formula izohlang
+- Formulani tushuntiring
+- Nazariyani oddiy tilda izohlang
 - Misol ishlang
 - Keyin mashq bering
 - Bosqichma-bosqich tushuntiring
@@ -96,7 +98,7 @@ bo‘yicha professional feedback bering.
 ======================================
 
 - IELTS ustozidek yordam bering
-- Writinglarni professional tekshiring
+- Writingni professional tekshiring
 - Speaking uchun tabiiy javob yozing
 
 ======================================
@@ -112,7 +114,7 @@ bo‘yicha professional feedback bering.
 ======================================
 
 - Oldingi savollarni eslab qoling
-- Mavzularni bog‘lab davom ettiring
+- Suhbatni tabiiy davom ettiring
 
 ======================================
 USLUB
@@ -121,21 +123,20 @@ USLUB
 - Doim “Siz” deb murojaat qiling
 - Professional ustozdek yozing
 - Juda ko‘p emoji ishlatmang
-- Motivatsion bo‘ling
 """
 
-# ====================================
+# =========================================
 # FLASK
-# ====================================
+# =========================================
 app_web = Flask(__name__)
 
 @app_web.route("/")
 def home():
     return "LangGo Academy ishlayapti 🚀"
 
-# ====================================
-# MENU
-# ====================================
+# =========================================
+# MENULAR
+# =========================================
 main_menu = [
     ['🌍 Jahon tillari', '🔢 Aniq fanlar']
 ]
@@ -153,23 +154,21 @@ science_menu = [
     ['⬅️ Orqaga']
 ]
 
-# ====================================
+# =========================================
 # START
-# ====================================
+# =========================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     context.user_data.clear()
 
     text = (
         "🎓 LangGo Academy AI ustoz botiga xush kelibsiz.\n\n"
-        "📚 Siz bu bot orqali:\n"
-        "• tarjima\n"
-        "• grammatika\n"
-        "• speaking\n"
-        "• writing\n"
-        "• matematika va fanlar\n"
-        "• rasmli savollar\n"
-        "bo‘yicha professional yordam olishingiz mumkin.\n\n"
+        "📚 Bu bot:\n"
+        "• tarjima qiladi\n"
+        "• grammatika tushuntiradi\n"
+        "• speaking/writing tekshiradi\n"
+        "• matematika va fanlarni o‘rgatadi\n"
+        "• rasmli savollarni tahlil qiladi\n\n"
         "📌 Kerakli bo‘limni tanlang:"
     )
 
@@ -181,14 +180,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     )
 
-# ====================================
+# =========================================
 # GEMINI FUNCTION
-# ====================================
+# =========================================
 async def ask_gemini(prompt, history, image_bytes=None):
 
     url = (
         "https://generativelanguage.googleapis.com/v1beta/models/"
-        f"gemini-1.5-flash:generateContent?key={GEMINI_KEY}"
+        f"gemini-2.0-flash:generateContent?key={GEMINI_KEY}"
     )
 
     headers = {
@@ -248,6 +247,7 @@ async def ask_gemini(prompt, history, image_bytes=None):
         "generationConfig": {
             "temperature": 0.7,
             "topP": 0.95,
+            "topK": 40,
             "maxOutputTokens": 2048
         }
     }
@@ -276,15 +276,17 @@ async def ask_gemini(prompt, history, image_bytes=None):
 
         return f"⚠️ TEXNIK XATOLIK:\n{str(e)}"
 
-# ====================================
+# =========================================
 # HANDLE MESSAGE
-# ====================================
+# =========================================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     text = ""
     photo_bytes = None
 
+    # =========================================
     # PHOTO
+    # =========================================
     if update.message.photo:
 
         photo = update.message.photo[-1]
@@ -299,7 +301,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             else "Rasm ichidagi savolni tushuntiring."
         )
 
+    # =========================================
     # TEXT
+    # =========================================
     elif update.message.text:
 
         text = update.message.text.strip()
@@ -338,7 +342,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return
 
-        # SUBJECT
+        # SUBJECT TANLASH
         subjects = [
             "Nemis",
             "Ingliz",
@@ -369,24 +373,30 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
             return
 
+    # =========================================
     # SUBJECT CHECK
+    # =========================================
     subject = context.user_data.get("subject")
 
     if not subject:
 
         await update.message.reply_text(
-            "⚠️ Avval fan yoki til tanlang!"
+            "⚠️ Avval bo‘lim tanlang!"
         )
 
         return
 
+    # =========================================
     # HISTORY
+    # =========================================
     if "history" not in context.user_data:
         context.user_data["history"] = []
 
     history = context.user_data["history"]
 
+    # =========================================
     # FINAL PROMPT
+    # =========================================
     final_prompt = (
         f"Tanlangan bo‘lim: {subject}\n\n"
         f"Foydalanuvchi savoli:\n{text}"
@@ -408,7 +418,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             action=ChatAction.TYPING
         )
 
-        # AI
+        # AI JAVOB
         answer = await ask_gemini(
             prompt=final_prompt,
             history=history,
@@ -449,9 +459,9 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "⚠️ Texnik xatolik yuz berdi."
         )
 
-# ====================================
+# =========================================
 # FLASK START
-# ====================================
+# =========================================
 def run_flask():
 
     port = int(
@@ -465,18 +475,16 @@ def run_flask():
         use_reloader=False
     )
 
-# ====================================
+# =========================================
 # MAIN
-# ====================================
+# =========================================
 def main():
 
     if not BOT_TOKEN:
-
         print("❌ TELEGRAM_BOT_TOKEN topilmadi")
         return
 
     if not GEMINI_KEY:
-
         print("❌ GEMINI_API_KEY topilmadi")
         return
 
@@ -514,8 +522,8 @@ def main():
 
     app.run_polling()
 
-# ====================================
+# =========================================
 # RUN
-# ====================================
+# =========================================
 if __name__ == "__main__":
     main()
