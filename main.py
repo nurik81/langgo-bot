@@ -67,7 +67,7 @@ LEVELS = [
     (150, "🔥 Professional"),
     (300, "🏆 Ekspert"),
     (500, "💎 Ustoz"),
- ]
+]
 
 MOTIVATIONS = [
     "Zo'r ketayapsiz! 💪 Har bir savol — yangi bilim!",
@@ -262,7 +262,7 @@ SPEAKING_TOPICS = {
     ],
     "🇷🇺 Rus": [
         "Опишите ваш родной город. Что вам в нём нравится?",
-        "Расскажите о человеку, который повлиял на вашу жизнь.",
+        "Расскажите о человеке, который повлиял на вашу жизнь.",
         "Опишите незабываемую поездку.",
         "Каковы плюсы и минусы социальных сетей?",
         "Расскажите о вашем хобби и почему вам это нравится.",
@@ -327,8 +327,8 @@ TELC BAHOLASH MEZONLARI (jami 75 ball):
 
 3. FORMALE RICHTIGKEIT — Grammatik to'g'rilik: 0 dan 25 ball
    • Grammatik xatolar soni va og'irligi
-   • Gap tuzilishi va so'z tartibi to'g'riligi
-   • Tinish belgilari va imlo to'g'riligi
+   • Gap tuzilishi va so'z tartibi to'g'riligи
+   • Tinish belgilari va imlo to'g'riligи
    • Zamon va kelishik shakllarining to'g'riligi
 
 JAVOB FORMATI (qat'iy shu tartibda):
@@ -356,7 +356,7 @@ MUHIM: ** yoki * ishlatmang. TELC standartida adolatli va aniq baho bering."""
 VISION_SYSTEM = """Siz LangGo Academy ning til va fan o'qituvchisisiz. 
 Foydalanuvchi o'quv kitobi, darslik yoki mashq sahifasining rasmini yubordi.
 
-VAZIFANGIZ — shunchayi rasm tavsifini emas, TO'LIQ TA'LIM YORDAMINI bering:
+VAZIFANGIZ — shunchaki rasm tavsifini emas, TO'LIQ TA'LIM YORDAMINI bering:
 
 1. Rasmdagi TOPSHIRIQ/VAZIFANI aniqlang
 2. Har bir PUNKT yoki BANDNI raqam bilan ALOHIDA tushuntiring
@@ -857,11 +857,11 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if mode == "writing_topic":
         await update.message.reply_text("📸 Shartni rasmdan o'qimoqdaman... ⏳")
-    elif mode == "writing_submission":
-        await update.message.reply_text("📸 Yozma ishingiz rasmini qabul qildim. TELC mezonlari asosida tekshirilmoqda... ⏳ (20-30 soniya)")
+    elif mode == "writing":
+        await update.message.reply_text("📸 Yozma ishingiz rasmi tahlil qilinmoqda va TELC mezonlari asosida tekshirilmoqda... ⏳")
     elif mode == "speaking":
         await update.message.reply_text("📸 Rasmdagi matn speaking sifatida baholanmoqda... ⏳")
-    elif mode not in ("writing", "speaking"):
+    else:
         await update.message.reply_text("📸 Rasm tahlil qilinmoqda... ⏳ (20-30 soniya)")
 
     try:
@@ -872,59 +872,39 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         user_caption = update.message.caption
 
-        # ---- NEW WRITING FLOW: TOPIC FROM PHOTO ----
         if mode == "writing_topic":
             lang = writing_lang or "Ingliz"
             extract_prompt = (
-                f"Bu rasmda {lang} tilidagi yozma topshiriq/shart bor. "
-                f"Rasmdagi BARCHA MATNNI o'qi va faqat topshiriq/shartning qisqacha mazmunini va punktlarini o'zbek tilida tushuntirib ber. "
-                f"Faqat topshiriq tushuntirishini yoz — boshqa ortiqcha gap qo'shma."
+                f"Bu rasmda {lang} tilidagi TELC yoki boshqa rasmiy imtihonning yozma (writing) topshiriq sharti bor. "
+                f"Rasmdagi barcha matn va punktlarni o'qi. Ularni o'zbek tilida qisqa, tushunarli va punktma-punkt formatda extract qilib ber. "
+                f"Faqat topshiriq sharti mazmunini yoz, boshqa gap qo'shma."
             )
             extracted_topic = await asyncio.get_running_loop().run_in_executor(
                 None, lambda: ask_ai_vision(image_bytes, extract_prompt)
             )
             context.user_data["writing_topic"] = extracted_topic
-            context.user_data["mode"] = "writing_submission"
+            context.user_data["mode"] = "writing"
             await update.message.reply_text(
-                f"✅ Shart rasmdan muvaffaqiyatli aniqlandi:\n\n📋 {extracted_topic}\n\n"
-                f"👇 Endi o'zingiz yozgan email/xatni matn shaklida yuboring yoki rasmga olib yuboring (AI uni tahlil qiladi):",
+                f"✅ Shart aniqlandi:\n\n📋 {extracted_topic}\n\n"
+                f"✍️ Endi o'zingiz yozgan email/xatni matn ko'rinishida yuboring yoki rasmini joylang!",
                 reply_markup=ReplyKeyboardMarkup(
                     [["⬅️ Orqaga"]], resize_keyboard=True
                 )
             )
             return
 
-        # ---- NEW WRITING FLOW: SUBMISSION FROM PHOTO ----
-        if mode == "writing_submission":
+        if mode == "writing":
             lang = writing_lang or "Ingliz"
             topic = context.user_data.get("writing_topic", "")
-            topic_hint = f"\nMavzu/Shart: {topic}" if topic else "\nShart ko'rsatilmagan — umumiy sifatni baholang."
+            caption_hint = f"\nFoydalanuvchi qo'shimcha izoh qoldirdi: {user_caption}" if user_caption else ""
             prompt = (
-                f"Rasmdagi qo'lda yoki bosmada yozilgan {lang} tilidagi matnni (foydalanuvchining yozma ishini) o'qi.\n"
-                f"So'ng o'sha matnni TELC mezonlari bo'yicha 0-75 ball tizimida qat'iy bahola.{topic_hint}\n\n"
+                f"Rasmdagi qo'lda yoki bosmada {lang} tilida yozilgan matnni (yozma ishni) diqqat bilan o'qi.\n"
+                f"Berilgan topshiriq sharti: {topic}\n"
+                f"Ushbu matnni TELC standartlari asosida, qat'iy 0-75 ball tizimida bahola.{caption_hint}\n\n"
                 f"{WRITING_SYSTEM}"
             )
-            answer = await asyncio.get_running_loop().run_in_executor(
-                None, lambda: ask_ai_vision(image_bytes, prompt)
-            )
-            
-            # Update stats
-            subject = context.user_data.get("subject", f"{lang} writing")
-            saved = load_stats(update.effective_chat.id)
-            stats = saved if saved["total"] >= context.user_data.get("stats", {"total": 0})["total"] else context.user_data.get("stats")
-            stats["total"] += 1
-            stats["subjects"][subject] = stats["subjects"].get(subject, 0) + 1
-            context.user_data["stats"] = stats
-            save_stats(update.effective_chat.id, stats)
-
-            if len(answer) > 4096:
-                for i in range(0, len(answer), 4096):
-                    await update.message.reply_text(answer[i:i + 4096])
-            else:
-                await update.message.reply_text(answer)
-            return
-
-        if mode == "speaking":
+            subject = f"{lang} writing"
+        elif mode == "speaking":
             lang = speaking_lang or "Ingliz"
             topic = context.user_data.get("speaking_topic", "")
             prompt = (
@@ -932,8 +912,10 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"Mavzu: {topic}\n\n"
                 f"{SPEAKING_SYSTEM}"
             )
+            subject = f"{lang} speaking"
         elif user_caption:
             prompt = user_caption
+            subject = "Rasm tahlil"
         else:
             prompt = (
                 "Bu rasmni diqqat bilan ko'ring. Bu o'quv kitobi yoki darslik sahifasi bo'lishi mumkin.\n\n"
@@ -945,10 +927,21 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 "5. Zarur grammatika yoki leksikani ham tushuntiring\n\n"
                 "Faqat rasm tavsifini bermasdan — TO'LIQ O'QUV YORDAMI bering!"
             )
+            subject = "Rasm tahlil"
 
         answer = await asyncio.get_running_loop().run_in_executor(
             None, lambda: ask_ai_vision(image_bytes, prompt)
         )
+
+        # Statistika yangilash (agar writing yoki speaking bo'lsa)
+        if mode in ("writing", "speaking"):
+            saved = load_stats(update.effective_chat.id)
+            mem = context.user_data.get("stats", {"total": 0, "subjects": {}})
+            stats = saved if saved["total"] >= mem["total"] else mem
+            stats["total"] += 1
+            stats["subjects"][subject] = stats["subjects"].get(subject, 0) + 1
+            context.user_data["stats"] = stats
+            save_stats(update.effective_chat.id, stats)
 
         if len(answer) > 4096:
             for i in range(0, len(answer), 4096):
@@ -1112,7 +1105,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return
 
-    # ---- PROFESSIONAL WRITING FLOW (UPDATED) ----
     if text in ["✍️ Ingliz writing", "✍️ Nemis writing", "✍️ Rus writing", "✍️ O'zbek writing"]:
         lang = text.replace("✍️ ", "").replace(" writing", "")
         context.user_data.update({
@@ -1122,13 +1114,13 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "mode": "writing_topic"
         })
         await update.message.reply_text(
-            f"✍️ {lang.upper()} WRITING TEKSHIRUVI\n"
+            f"✍️ {lang} WRITING TEKSHIRUVI\n"
             f"━━━━━━━━━━━━━━━━\n\n"
-            f"❓ Qaysi shart/mavzu asosida yozdingiz?\n\n"
-            f"📝 Matn sifatida yozib yuborishingiz\n"
+            f"📋 Qaysi shart/mavzu bo'yicha yozdingiz?\n\n"
+            f"📝 Matn qilib yuborishingiz\n"
             f"YOKI\n"
-            f"📸 TELC writing topshiriq shartining rasmini yuborishingiz mumkin (AI o'zi aniqlaydi).\n\n"
-            f"Agar aniq shart bo'lmasa, «Mavzu yo'q» deb yuboring.",
+            f"📸 TELC writing topshiriq sharti rasmini yuborishingiz mumkin (AI o'zi o'qiydi).\n\n"
+            f"Agar aniq bir mavzu bo'lmasa — «Mavzu yo'q» deb yuboring.",
             reply_markup=ReplyKeyboardMarkup(
                 [["Mavzu yo'q"], ["⬅️ Orqaga"]], resize_keyboard=True
             )
@@ -1201,8 +1193,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     if text == "⬅️ Orqaga":
         context.user_data.pop("mode", None)
-        context.user_data.pop("writing_topic", None)
-        context.user_data.pop("writing_lang", None)
         await update.message.reply_text("🏠 Asosiy menyu:",
             reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True))
         return
@@ -1231,7 +1221,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # ---- SUBJECT SELECT ----
     subjects = ["Ingliz", "Nemis", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
 
-    if any(x.lower() in text.lower() for x in subjects) and context.user_data.get("mode") != "writing_topic" and context.user_data.get("mode") != "writing_submission":
+    if any(x.lower() in text.lower() for x in subjects):
         mode = context.user_data.get("mode", "normal")
 
         if mode == "quiz_select":
@@ -1267,15 +1257,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"✅ {text} tanlandi. Savolingizni yuboring!")
         return
 
-    # ---- NEW WRITING FLOW: TOPIC TEXT HANDLER ----
+    # ---- WRITING TOPIC HANDLER ----
     if context.user_data.get("mode") == "writing_topic":
         topic = "" if text == "Mavzu yo'q" else text
         context.user_data["writing_topic"] = topic
-        context.user_data["mode"] = "writing_submission"
-        topic_line = f"Shart: {topic}" if topic else "Shart ko'rsatilmagan — umumiy yozuv sifati baholanadi."
+        context.user_data["mode"] = "writing"
+        topic_line = f"Mavzu: {topic}" if topic else "Shart ko'rsatilmagan — umumiy yozuv sifati baholanadi."
         await update.message.reply_text(
-            f"✅ Qabul qilindi!\n\n📋 {topic_line}\n━━━━━━━━━━━━━━━━━━━━\n"
-            f"👇 Endi o'zingiz yozgan email/xatni matn shaklida yuboring yoki rasmga olib yuboring.",
+            f"✅ Mavzu qabul qilindi!\n"
+            f"📋 {topic_line}\n\n"
+            f"✍️ Endi o'zingiz yozgan email/xatni matn ko'rinishida yuboring yoki rasmini joylang (AI o'qiydi)!",
             reply_markup=ReplyKeyboardMarkup(
                 [["⬅️ Orqaga"]], resize_keyboard=True
             )
@@ -1309,8 +1300,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         answer = await asyncio.get_running_loop().run_in_executor(
             None, lambda: ask_ai(text, subject, history, system_override=system)
         )
-    # ---- NEW WRITING FLOW: SUBMISSION TEXT HANDLER ----
-    elif mode == "writing_submission":
+    elif mode == "writing":
         lang = context.user_data.get("writing_lang", "")
         preview = text[:300] + ("..." if len(text) > 300 else "")
         await update.message.reply_text(
@@ -1345,12 +1335,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             None, lambda: ask_ai(text, subject, history)
         )
 
-    if mode != "writing_submission":
-        history.append({"role": "user", "content": text})
-        history.append({"role": "assistant", "content": answer})
-        if len(history) > 20:
-            history = history[-20:]
-        context.user_data["history"] = history
+    history.append({"role": "user", "content": text})
+    history.append({"role": "assistant", "content": answer})
+    if len(history) > 20:
+        history = history[-20:]
+    context.user_data["history"] = history
 
     saved = load_stats(update.effective_chat.id)
     mem = context.user_data.get("stats", {"total": 0, "subjects": {}})
