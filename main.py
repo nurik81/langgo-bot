@@ -4,7 +4,7 @@ import base64
 import random
 import threading
 import requests
-import time as standard_time  # Nom chalkashmasligi uchun standard time modulini alohida nomladik
+import time as standard_time  # 'time' nomlari chalkashmasligi uchun standard time modulini alohida nomladik
 import datetime
 from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
@@ -218,138 +218,52 @@ def ask_ai(user_text, subject, history=None, system_override=None):
                 continue
             return f"⚠️ Xatolik: {r.text[:200]}"
         except requests.exceptions.Timeout:
-            print(f"Groq timeout 25s (urinish {attempt+1})")
             if attempt < 2:
                 standard_time.sleep(2)
                 continue
             return "⏱ Server sekin javob berdi. Iltimos, qayta yuboring!"
-        except requests.exceptions.ConnectionError:
-            print(f"Groq ulanish xatosi (urinish {attempt+1})")
-            if attempt < 2:
-                standard_time.sleep(3)
-                continue
-            return "📡 Internet yoki server muammo. Biroz kuting va qayta yuboring!"
         except Exception as e:
-            print(f"Groq kutilmagan xato: {e}")
-            return f"⚠️ Texnik xatolik. /reboot yuboring yoki keyinroq urining."
-    return "⚠️ Server hozir band. 1-2 daqiqadan so'ng qayta yuboring!"
+            return f"⚠️ Texnik xatolik: {str(e)}"
+    return "⚠️ Server hozir band. 1-2 daqiqa kuting."
 
 
-SPEAKING_TOPICS = {
-    "🇬🇧 Ingliz": [
-        "Describe your hometown. What do you like or dislike about it?",
-        "Talk about a person who has greatly influenced your life.",
-        "Describe a memorable trip or journey you have taken.",
-        "What are the advantages and disadvantages of social media?",
-        "Talk about your favorite book or movie and why you like it.",
-        "Describe a skill you would like to learn and explain why.",
-        "Do you think technology makes our lives better or worse? Why?",
-        "Talk about a challenge you have faced and how you overcame it.",
-        "Describe your ideal job and explain what makes it appealing.",
-        "Should universities be free for all students? Give your opinion.",
-    ],
-    "🇩🇪 Nemis": [
-        "Beschreiben Sie Ihre Heimatstadt. Was gefällt Ihnen dort?",
-        "Sprechen Sie über eine Person, die Ihr Leben beeinflusst hat.",
-        "Beschreiben Sie eine unvergessliche Reise.",
-        "Was sind die Vor- und Nachteile der sozialen Medien?",
-        "Sprechen Sie über Ihr Lieblingshobbys und warum.",
-        "Beschreiben Sie Ihren Traumjob.",
-        "Soll das Studium kostenlos sein? Begründen Sie Ihre Meinung.",
-        "Wie wichtig ist Sport in Ihrem Leben?",
-        "Beschreiben Sie eine schwierige Situation und wie Sie sie gelöst haben.",
-        "Was halten Sie von der Umweltverschmutzung? Was kann man tun?",
-    ],
-    "🇷🇺 Rus": [
-        "Опишите ваш родной город. Что вам в нём нравится?",
-        "Расскажите о человеку, который повлиял на вашу жизнь.",
-        "Опишите незабываемую поездку.",
-        "Каковы плюсы и минусы социальных сетей?",
-        "Расскажите о вашем хобби и почему вам это нравится.",
-        "Опишите вашу мечту о работе.",
-        "Должно ли высшее образование быть бесплатным?",
-        "Как технологии влияют на нашу жизнь?",
-        "Расскажите о трудной ситуации и как вы с ней справились.",
-        "Что вы думаете об охране окружающей среды?",
-    ],
-}
+# ASL UZUN MULTIMEDIA PROMPTLARI (SAQLAB QOLINDI)
+INGLIZ_PROMPT = """Siz professional ingliz tili ustozisiz. Rasmdagi matn, savol yoki mashqni ingliz tili qoidalari asosida o'zbek tilida tushuntiring.
+• Mashq bo'lsa, har bir punktni alohida tahlil qiling va to'g'ri javobni yozing.
+• Grammatika bo'lsa, qoidani o'zbekcha tushuntirib, rasmda keltirilgan misollarni tahlil qiling.
+• Matn yoki yangi so'zlar bo'lsa, lug'at va talaffuzini yozing."""
 
-SPEAKING_SYSTEM = """Siz professional SPEAKING (og'zaki nutq) murabbiyisiz.
-Foydalanuvchi yozma tarzda speaking javobini yuboryapti — uni baholaydi va o'rgatasan.
+NEMIS_PROMPT = """Sie sind ein professioneller Deutschlehrer. Rasmdagi nemis tili mashqini, grammatikasini yoki matnini to'liq o'zbek tilida tushuntirib bering.
+• Wortschatz und Grammatik qismlarini alohida tahlil qiling.
+• To'g'ri javoblarni asoslab bering."""
 
-BAHOLASH (0-75 BALL):
-1. MAZMUN VA G'OYA — 0-20 ball
-2. RAVONLIK VA MANTIQ — 0-15 ball
-3. LEKSIKA — 0-20 ball
-4. GRAMMATIKA — 0-20 ball
+RUS_PROMPT = """Вы профессиональный учитель русского языка. Rasmdagi rus tili topshiriqlarini, kelshiklar, fe'llar yoki matnlarni o'zbek tilida chuqur tushuntiring.
+• Grammatik qoidalarni aniq ko'rsating."""
 
-JAVOB FORMATI (qat'iy shu tartibda):
+TURK_PROMPT = """Siz profesyonel bir Türkçe öğretmenisiniz. Rasmdagi turk tili darsligi yoki mashqlarini o'zbek tilida tushuntirib yuboring."""
 
-🎤 SPEAKING BAHOSI: XX/75
+MATEMATIKA_PROMPT = """Siz tajribali matematika professorisiz. Rasmdagi misol yoki masalani chuqur tahlil qiling.
+• Formulalarni va qoidalarni yozing.
+• Bosqichma-bosqich yechimni ko'rsating.
+• Yakuniy aniq javobni belgilang."""
 
-📋 MAZMUN VA G'OYA: XX/20
-🔗 RAVONLIK VA MANTIQ: XX/15
-📚 LEKSIKA: XX/20
-✏️ GRAMMATIKA: XX/20
+FIZIKA_PROMPT = """Siz fizika fanidan olimpiada murabbiysisiz. Rasmdagi fizika masalasini yechib bering.
+• Berilgan va so'ralgan kattaliklarni yozing.
+• Fizika qonuniyatlari va formulalarini tushuntiring.
+• Hisob-kitobni qadam-baqadam bajaring."""
 
-✅ YAXSHI TOMONLAR:
-• ...
+KIMYO_PROMPT = """Siz kimyo fani doqtorisiz. Rasmdagi kimyoviy reaksiya, masala yoki elementlar tahlilini bering.
+• Reaksiya tenglamalarini to'liq yozing.
+• Masala bo'lsa, formulasini tushuntirib yeching."""
 
-❌ XATOLAR VA ZAIF JOYLAR:
-• ...
+BIOLOGIYA_PROMPT = """Siz biologiya fani mutaxassisiz. Rasmdagi biologik chizma, atama yoki savolni o'zbek tilida batafsil tushuntiring."""
 
-🌟 NAMUNA JAVOB (Band 7-8 darajasida):
-...
+ADABIYOT_PROMPT = """Siz adabiyotshunos olimsiz. Rasmdagi matn, she'r yoki savolni adabiy nuqtai nazardan tahlil qiling."""
 
-💡 FOYDALI IBORALAR:
-• ...
+ONATILI_PROMPT = """Siz ona tili fani ekspertisiz. Rasmdagi grammatik topshiriq, gap tahlili yoki imlo qoidalarini to'liq yozing."""
 
-MUHIM: ** yoki * ishlatmang. Rag'batlantiruvchi, adolatli va chuqur baho bering."""
-
-WRITING_SYSTEM = """Siz rasmiy TELC imtihoni tekshiruvchisisiz. Foydalanuvchi yozgan matnni TELC mezonlari asosida qat'iy 0-75 ball tizimida baholaysiz.
-
-TELC BAHOLASH MEZONLARI (jami 75 ball):
-1. AUFGABENERFÜLLUNG — Topshiriqni bajarish: 0 dan 25 ball
-2. KOMMUNIKATIVE GESTALTUNG — Uslub va tuzilish: 0 dan 25 ball
-3. FORMALE RICHTIGKEIT — Grammatik to'g'rilik: 0 dan 25 ball
-
-JAVOB FORMATI (qat'iy shu tartibda):
-
-📊 UMUMIY BALL: XX/75
-
-📋 Aufgabenerfüllung (Topshiriq): XX/25
-🔗 Kommunikative Gestaltung (Uslub): XX/25
-✏️ Formale Richtigkeit (Grammatika): XX/25
-
-✅ KUCHLI TOMONLAR:
-• ...
-
-❌ XATOLAR:
-• ...
-
-📝 YAXSHILANGAN VERSIYA:
-...
-
-💡 MASLAHAT:
-...
-
-MUHIM: ** yoki * ishlatmang. TELC standartida adolatli va aniq baho bering."""
-
-VISION_SYSTEM = """Siz LangGo Academy ning til va fan o'qituvchisisiz. 
-Foydalanuvchi o'quv kitobi, darslik yoki mashq sahifasining rasmini yubordi.
-
-VAZIFANGIZ — shunchaki rasm tavsifini emas, TO'LIQ TA'LIM YORDAMINI bering:
-1. Rasmdagi TOPSHIRIQ/VAZIFANI aniqlang
-2. Har bir PUNKT yoki BANDNI raqam bilan ALOHIDA tushuntiring
-3. Har bir punkt uchun NAMUNA JAVOB va MISOL yozing
-4. Vazifani bajarish uchun FOYDALI G'OYALAR va IBORALAR tavsiya qiling
-5. Zarur GRAMMATIKA yoki LEKSIKANI tushuntiring
-6. Oxirida foydalanuvchini rag'batlantiring
-
-MUHIM: 
-• Javobni O'ZBEK TILIDA yozing
-• ** asterisk ishlatmang — faqat KATTA HARF, • nuqtalar va emojilar
-• Amaliy, chuqur, o'quvchi uchun foydali javob bering"""
+WRITING_SYSTEM = "Siz rasmiy TELC imtihoni tekshiruvchisisiz. Foydalanuvchi yozgan matnni TELC mezonlari asosida qat'iy 0-75 ball tizimida baholaysiz."
+SPEAKING_SYSTEM = "Siz professional SPEAKING (og'zaki nutq) murabbiyisiz. Matnni baholang va xatolarni ko'rsating."
 
 def ask_ai_vision(image_bytes: bytes, prompt: str) -> str:
     url = "https://api.groq.com/openai/v1/chat/completions"
@@ -362,7 +276,7 @@ def ask_ai_vision(image_bytes: bytes, prompt: str) -> str:
             {
                 "role": "user",
                 "content": [
-                    {"type": "text", "text": f"{VISION_SYSTEM}\n\nFoydalanuvchi so'rovi: {prompt}"},
+                    {"type": "text", "text": prompt},
                     {"type": "image_url", "image_url": {"url": f"data:image/jpeg;base64,{b64}"}}
                 ]
             }
@@ -372,10 +286,9 @@ def ask_ai_vision(image_bytes: bytes, prompt: str) -> str:
 
     try:
         r = requests.post(url, json=payload, headers=headers, timeout=90)
-        print(f"Groq Vision → {r.status_code}")
         if r.status_code == 200:
             return r.json()["choices"][0]["message"]["content"]
-        return f"⚠️ Rasm tahlil xatolik: {r.text[:200]}"
+        return f"⚠️ Rasm tahlilida xato: {r.text[:200]}"
     except Exception as e:
         return f"⚠️ Texnik xatolik: {str(e)}"
 
@@ -388,36 +301,19 @@ def generate_quiz(subject: str, used_questions: list = None) -> list:
     if used_questions:
         used_str = "\n\nQUYIDAGI SAVOLLARNI TAKRORLAMANG:\n" + "\n".join(f"- {q}" for q in used_questions[-20:])
 
-    is_math = any(x in subject for x in ["Matematika", "Fizika", "Kimyo"])
-
-    if is_math:
-        extra = """MATEMATIKA/FIZIKA/KIMYO uchun MUHIM QOIDALAR:
-- Har bir savol ANIQ HISOB-KITOB talab qilsin
-- To'g'ri javob ALBATTA to'g'ri bo'lsin
-- A, B, C, D variantlardan faqat BITTASI to'g'ri bo'lsin"""
-    else:
-        extra = """- Savollar xilma-xil bo'lsin (so'z ma'nosi, grammatika, tarjima)
-- To'g'ri javob aniq va shubhasiz bo'lsin"""
-
     prompt = f"""'{subject}' mavzusida 10 ta test savoli tuzing.
+A, B, C, D variantlardan faqat BITTASI to'g'ri bo'lsin.
 
-{extra}
-{used_str}
-
-Qat'iy quyidagi formatda yozing (har savol orasida bo'sh qator bo'lsin):
+Qat'iy quyidagi formatda yozing:
 1. Savol matni?
 A) ...
 B) ...
 C) ...
 D) ...
 To'g'ri: A
-Izoh: ...
+Izoh: ..."""
 
-Faqa't savollar, boshqa hech narsa yozmang."""
-
-    result = ask_ai(prompt, subject, system_override=(
-        "Siz professional test tuzuvchi mutaxasssissiz. Faqat berilgan formatda savollar tuzing."
-    ))
+    result = ask_ai(prompt, subject, system_override="Siz professional test tuzuvchisiz. Faqat berilgan formatda javob bering.")
     questions = []
 
     for block in result.strip().split("\n\n"):
@@ -430,285 +326,148 @@ Faqa't savollar, boshqa hech narsa yozmang."""
                 if line.startswith(("A)", "B)", "C)", "D)")):
                     q["options"][line[0]] = line[3:].strip()
             for line in lines:
-                if line.lower().startswith(("to'g'ri:", "togri:", "to`g`ri:")):
+                if line.lower().startswith(("to'g'ri:", "togri:")):
                     ans = line.split(":")[-1].strip()
-                    if ans:
-                        q["answer"] = ans[0].upper()
+                    if ans: q["answer"] = ans[0].upper()
                 if line.lower().startswith("izoh:"):
                     q["explanation"] = line.split(":", 1)[-1].strip()
             if q["question"] and len(q["options"]) >= 2 and q["answer"] in ["A", "B", "C", "D"]:
                 questions.append(q)
         except Exception:
             continue
-
     return questions[:10]
 
-
-# ======================================================
-# DAILY WORD
-# ======================================================
 async def send_daily_word(context):
     data = load_users()
-    if not data["users"]:
-        return
-
+    if not data["users"]: return
     langs = ["Ingliz", "Nemis", "Rus", "Turk"]
     lang = random.choice(langs)
-
-    word_prompt = f"Bugungi kun uchun {lang} tilidan bitta foydali so'z tanlang. Format:\n🔤 So'z: ...\n📖 Ma'no: ...\n🗣 Talaffuz: ...\n💬 Misol: ...\n🔄 Tarjima: ..."
-    word = ask_ai(word_prompt, lang, system_override="Siz til o'qituvchisisiz. Har kuni yangi foydali so'z o'rgatasiz.")
-
+    word_prompt = f"Bugungi kun uchun {lang} tilidan bitta foydali so'z tanlang. Format:\n🔤 So'z: ...\n📖 Ma'no: ..."
+    word = ask_ai(word_prompt, lang, system_override="Siz til o'qituvchisisiz.")
     for chat_id in data["users"]:
-        try:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text=f"📅 Kundalik so'z — {lang} tili\n\n{word}"
-            )
-        except Exception as e:
-            print(f"Daily word error for {chat_id}: {e}")
+        try: await context.bot.send_message(chat_id=chat_id, text=f"📅 Kundalik so'z — {lang} tili\n\n{word}")
+        except Exception: pass
 
-
-# ======================================================
-# KEEP-ALIVE
-# ======================================================
+# Keep-alive server
 class HealthHandler(BaseHTTPRequestHandler):
     def do_GET(self):
         self.send_response(200)
         self.end_headers()
-        self.wfile.write(b"LangGo Academy Bot is alive!")
-    def log_message(self, format, *args):
-        pass
+        self.wfile.write(b"Alive")
+    def log_message(self, format, *args): pass
 
 def run_health_server():
-    port = int(os.getenv("PORT", 8000))
-    server = HTTPServer(("0.0.0.0", port), HealthHandler)
+    server = HTTPServer(("0.0.0.0", int(os.getenv("PORT", 8000))), HealthHandler)
     server.serve_forever()
 
 def run_self_ping():
-    port = int(os.getenv("PORT", 8000))
-    url = f"http://localhost:{port}/"
-    print(f"🔄 Self-ping ishga tushdi: {url}")
-    standard_time.sleep(10)
+    url = f"http://localhost:{os.getenv('PORT', 8000)}/"
     while True:
         standard_time.sleep(90)
-        try:
-            r = requests.get(url, timeout=10)
-            print(f"🔄 Self-ping: {r.status_code}")
-        except Exception as e:
-            print(f"⚠️ Self-ping xatolik: {e}")
+        try: requests.get(url, timeout=10)
+        except Exception: pass
 
-# ======================================================
-# ADMIN ID
-# ======================================================
 ADMIN_ID = 6396413650
 
 async def myid_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    uid = update.effective_user.id
-    name = update.effective_user.first_name or ""
-    await update.message.reply_text(
-        f"🪪 SIZNING TELEGRAM ID INGIZ:\n\n👤 {name}\n🔢 ID: {uid}"
-    )
+    await update.message.reply_text(f"🔢 ID: {update.effective_user.id}")
 
 async def admin_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if ADMIN_ID == 0 or update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Bu buyruq faqat admin uchun.")
-        return
-
-    data = load_users()
-    total_users = len(data["users"])
-
-    admin_menu = [
-        ["🏠 Bosh menyu", "🌐 Til tanlash"],
-        ["📅 Bugungi so'z", "🏆 Yutuqlar"],
-        ["📊 Statistika", "❓ Yordam"],
-        ["📢 Broadcast", "🔄 Reboot"],
-    ]
-
-    text = (
-        f"🛡 ADMIN PANEL\n━━━━━━━━━━━━━━━━\n\n"
-        f"👥 Jami foydalanuvchilar: {total_users} ta\n\n"
-        f"📌 ADMIN BUYRUQLAR:\n• /broadcast <xabar>\n• /reboot"
-    )
-    await update.message.reply_text(
-        text, reply_markup=ReplyKeyboardMarkup(admin_menu, resize_keyboard=True)
-    )
+    if update.effective_user.id != ADMIN_ID: return
+    await update.message.reply_text("🛡 ADMIN PANEL\n\n/broadcast <xabar>\n/reboot")
 
 async def reboot_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if ADMIN_ID == 0 or update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Bu buyruq faqat admin uchun.")
-        return
-    await update.message.reply_text("🔄 Bot qayta ishga tushirilmoqda...")
+    if update.effective_user.id != ADMIN_ID: return
+    await update.message.reply_text("🔄 Bot o'chib yonmoqda...")
     os._exit(0)
 
 async def broadcast_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    if ADMIN_ID == 0 or update.effective_user.id != ADMIN_ID:
-        await update.message.reply_text("⛔ Bu buyruq faqat admin uchun.")
-        return
+    if update.effective_user.id != ADMIN_ID or not context.args: return
+    msg = " ".join(context.args)
+    for uid in load_users()["users"]:
+        try: await context.bot.send_message(chat_id=uid, text=f"📢 {msg}")
+        except Exception: pass
+    await update.message.reply_text("✅ Tugadi.")
 
-    if not context.args:
-        await update.message.reply_text("📢 Foydalanish: /broadcast <xabaringiz>")
-        return
-
-    message_text = " ".join(context.args)
-    data = load_users()
-    users = data["users"]
-
-    sent = 0
-    failed = 0
-    status_msg = await update.message.reply_text(f"📤 Yuborilmoqda... 0/{len(users)}")
-
-    for chat_id in users:
-        try:
-            await context.bot.send_message(
-                chat_id=chat_id,
-                text=f"📢 ADMIN XABARI\n━━━━━━━━━━━━━━━━\n\n{message_text}"
-            )
-            sent += 1
-        except Exception:
-            failed += 1
-
-    await status_msg.edit_text(f"✅ Yuborildi: {sent} ta\n❌ Xatolik: {failed} ta")
-
-# ======================================================
-# CORE COMMANDS
-# ======================================================
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_user(update.effective_chat.id)
-    name = update.effective_user.first_name or "O'quvchi"
-    saved_stats = load_stats(update.effective_chat.id)
     context.user_data.clear()
-    context.user_data["stats"] = saved_stats
-
-    text = (
-        f"Salom, {name}! 👋 LangGo Academy virtual botiga xush kelibsiz!\n\n"
-        "👇 Kerakli bo'limni tanlang:"
-    )
-    await update.message.reply_text(text, reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True))
+    context.user_data["stats"] = load_stats(update.effective_chat.id)
+    await update.message.reply_text("Salom! Xush kelibsiz! 👇 Bo'limni tanlang:", reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True))
 
 async def help_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = (
-        "📚 LangGo Academy — Yordam\n\n"
-        "/start — Botni qayta ishga tushirish\n"
-        "/language — Til tanlash\n"
-        "/vocabulary — Bugungi yangi so'z\n"
-        "/stats — Statistikangiz\n\n"
-        "Muammo yoki savol bo'lsa admin bilan bog'laning: @nurik_571m"
-    )
-    await update.message.reply_text(text)
+    await update.message.reply_text("Yordam buyruqlari:\n/start - Boshlash\n/stats - Statistika")
 
 async def language_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        "🌐 Qaysi tilda o'rganmoqchisiz?",
-        reply_markup=ReplyKeyboardMarkup(languages_menu, resize_keyboard=True)
-    )
+    await update.message.reply_text("🌍 Tilni tanlang:", reply_markup=ReplyKeyboardMarkup(languages_menu, resize_keyboard=True))
 
 async def vocabulary_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    import asyncio
-    await update.message.reply_text("📅 Bugungi so'z tayyorlanmoqda... ⏳")
-    langs = ["Ingliz", "Nemis", "Rus", "Turk"]
-    lang = random.choice(langs)
-    word_prompt = f"Bugungi kun uchun {lang} tilidan bitta foydali so'z tanlang. Format:\n🔤 So'z: ...\n📖 Ma'no: ..."
-    word = await asyncio.get_running_loop().run_in_executor(
-        None, lambda: ask_ai(word_prompt, lang, system_override="Siz til o'qituvchisisiz.")
-    )
-    await update.message.reply_text(f"📅 Kundalik so'z — {lang} tili\n\n{word}")
+    await update.message.reply_text("⏳ So'z tayyorlanmoqda...")
+    await send_daily_word(context)
 
 async def progress_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    saved = load_stats(update.effective_chat.id)
-    total = saved.get("total", 0)
-    level = get_level(total)
-    await update.message.reply_text(f"🏆 YUTUQLARINGIZ:\n\n👤 Daraja: {level}\n⭐ Jami savollar: {total} ta")
+    s = load_stats(update.effective_chat.id)
+    await update.message.reply_text(f"⭐ Daraja: {get_level(s['total'])}\nJami savollar: {s['total']}")
 
 async def stats_cmd(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    saved = load_stats(update.effective_chat.id)
-    total = saved.get("total", 0)
-    level = get_level(total)
-    await update.message.reply_text(f"📊 STATISTIKA:\n\n👤 Darajangiz: {level}\n⭐ Berilgan savollar: {total} ta")
+    await progress_cmd(update, context)
 
 # ======================================================
-# MULTIMEDIA HANDLERS
+# MULTIMEDIA RASM/PDF QABUL QILISH (TO'G'RILANDI)
 # ======================================================
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     import asyncio
+    subject = context.user_data.get("subject", "Umumiy")
     mode = context.user_data.get("mode", "normal")
-    writing_lang = context.user_data.get("writing_lang", "")
-    speaking_lang = context.user_data.get("speaking_lang", "")
 
-    await update.message.reply_text("📸 Rasm tahlil qilinmoqda... ⏳ (20-30 soniya)")
+    await update.message.reply_text("📸 Rasm qabul qilindi, tahlil qilinmoqda... ⏳")
 
     try:
         photo = update.message.photo[-1]
         file = await context.bot.get_file(photo.file_id)
-        image_bytearray = await file.download_as_bytearray()
-        image_bytes = bytes(image_bytearray)
-        user_caption = update.message.caption
+        img_bytes = bytes(await file.download_as_bytearray())
 
-        if mode == "writing_topic":
-            lang = writing_lang or "Ingliz"
-            extract_prompt = f"Rasmdagi topshiriq/shartni o'qi va faqat shartni qisqacha o'zbek tilida yoz."
-            extracted_topic = await asyncio.get_running_loop().run_in_executor(
-                None, lambda: ask_ai_vision(image_bytes, extract_prompt)
-            )
-            context.user_data["writing_topic"] = extracted_topic
-            context.user_data["mode"] = "writing"
-            await update.message.reply_text(f"✅ Shart aniqlandi:\n\n📋 {extracted_topic}\n\nEndi yozma ishingizni rasmda yuboring!")
-            return
+        # ASL PROMPTLAR BO'YICHA YO'NALTIRISH
+        p_map = {
+            "🇬🇧 Ingliz tili": INGLIZ_PROMPT, "🇩🇪 Nemis tili": NEMIS_PROMPT,
+            "🇷🇺 Rus tili": RUS_PROMPT, "🇹🇷 Turk tili": TURK_PROMPT,
+            "🧮 Matematika": MATEMATIKA_PROMPT, "🔭 Fizika": FIZIKA_PROMPT,
+            "🧪 Kimyo": KIMYO_PROMPT, "🧬 Biologiya": BIOLOGIYA_PROMPT,
+            "📚 Adabiyot": ADABIYOT_PROMPT, "📝 Ona tili": ONATILI_PROMPT
+        }
+        
+        prompt = p_map.get(subject, "Ushbu rasmdagi topshiriqni tushuntirib bering.")
+        if mode == "writing": prompt = WRITING_SYSTEM
+        elif mode == "speaking": prompt = SPEAKING_SYSTEM
 
-        if mode == "writing":
-            lang = writing_lang or "Ingliz"
-            prompt = f"Rasmdagi {lang} matnni TELC tizimida bahola.\n\n{WRITING_SYSTEM}"
-        elif mode == "speaking":
-            lang = speaking_lang or "Ingliz"
-            prompt = f"Rasmdagi matnni {lang} speaking deb bahola.\n\n{SPEAKING_SYSTEM}"
-        elif user_caption:
-            prompt = user_caption
-        else:
-            prompt = "Ushbu darslik rasmini aniqlab, to'liq o'quv yordami bering."
+        if update.message.caption:
+            prompt += f"\n\nFoydalanuvchi qo'shimcha so'rovi: {update.message.caption}"
 
-        answer = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: ask_ai_vision(image_bytes, prompt)
-        )
-
-        if len(answer) > 4096:
-            for i in range(0, len(answer), 4096):
-                await update.message.reply_text(answer[i:i + 4096])
-        else:
-            await update.message.reply_text(answer)
+        answer = await asyncio.get_running_loop().run_in_executor(None, lambda: ask_ai_vision(img_bytes, prompt))
+        await update.message.reply_text(answer)
 
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Rasm tahlilida xatolik: {e}")
+        await update.message.reply_text(f"⚠️ Tahlilda xato: {e}")
 
 async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     import asyncio
     doc = update.message.document
-    if not doc.file_name.lower().endswith(".pdf"):
-        await update.message.reply_text("⚠️ Faqat PDF qabul qilinadi.")
-        return
-
-    await update.message.reply_text("📄 PDF o'qilmoqda... ⏳")
+    if not doc.file_name.lower().endswith(".pdf"): return
+    await update.message.reply_text("📄 PDF o'qilmoqda...")
     try:
         file = await context.bot.get_file(doc.file_id)
-        pdf_bytearray = await file.download_as_bytearray()
+        b = bytes(await file.download_as_bytearray())
         text = ""
-        with pdfplumber.open(BytesIO(bytes(pdf_bytearray))) as pdf:
+        with pdfplumber.open(BytesIO(b)) as pdf:
             for page in pdf.pages[:10]:
-                t = page.extract_text()
-                if t: text += t + "\n"
-
-        if not text.strip():
-            await update.message.reply_text("⚠️ PDF bo'sh.")
-            return
-
-        prompt = f"Matn:\n{text[:3000]}\n\nTahlil qiling."
-        answer = await asyncio.get_running_loop().run_in_executor(
-            None, lambda: ask_ai(prompt, "PDF tahlil")
-        )
-        await update.message.reply_text(answer)
+                text += (page.extract_text() or "") + "\n"
+        ans = await asyncio.get_running_loop().run_in_executor(None, lambda: ask_ai(f"Tahlil qiling:\n{text[:3000]}", "PDF"))
+        await update.message.reply_text(ans)
     except Exception as e:
-        await update.message.reply_text(f"⚠️ Xato: {e}")
+        await update.message.reply_text(f"⚠️ PDF Xato: {e}")
 
 # ======================================================
-# MESSAGE PROCESSING
+# XABARLARNI QAYTA ISHLASH
 # ======================================================
 async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     save_user(update.effective_chat.id)
@@ -727,28 +486,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if text == "📊 Statistika":
         await stats_cmd(update, context)
         return
-    if text == "🏠 Bosh menyu" or text == "⬅️ Orqaga":
+    if text in ["🏠 Bosh menyu", "⬅️ Orqaga"]:
         context.user_data.pop("mode", None)
         await start(update, context)
         return
 
     if text == "📝 Writing tekshiruv":
-        context.user_data.update({"mode": "writing_select"})
-        await update.message.reply_text("📝 Qaysi tildagi matnni tekshiramiz?", reply_markup=ReplyKeyboardMarkup(
-            [["✍️ Ingliz writing", "✍️ Nemis writing"], ["⬅️ Orqaga"]], resize_keyboard=True
-        ))
-        return
-
-    if text in ["✍️ Ingliz writing", "✍️ Nemis writing"]:
-        lang = text.replace("✍️ ", "").replace(" writing", "")
-        context.user_data.update({"mode": "writing_topic", "writing_lang": lang})
-        await update.message.reply_text(f"✍️ {lang} Writing mavzusi yoki shartini yozing (yoki rasm yuboring). Shart bo'lmasa 'Mavzu yo'q' deb yozing.", reply_markup=ReplyKeyboardMarkup([["Mavzu yo'q"], ["⬅️ Orqaga"]], resize_keyboard=True))
-        return
-
-    if context.user_data.get("mode") == "writing_topic":
-        topic = "" if text == "Mavzu yo'q" else text
-        context.user_data.update({"writing_topic": topic, "mode": "writing"})
-        await update.message.reply_text("✅ Shart saqlandi. Endi to'liq matningizni yozib yuboring!")
+        context.user_data.update({"mode": "writing"})
+        await update.message.reply_text("📝 Matningizni yozing yoki rasmda yuboring. Men uni TELC tizimida tekshirib beraman.", reply_markup=ReplyKeyboardMarkup([["⬅️ Orqaga"]], resize_keyboard=True))
         return
 
     if text == "🎯 Quiz / Test":
@@ -756,7 +501,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("🎯 Qaysi bo'limdan test ishlaysiz?", reply_markup=ReplyKeyboardMarkup(quiz_subject_menu, resize_keyboard=True))
         return
 
-    subjects = ["Ingliz", "Nemis", "Rus", "Turk", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
+    subjects = ["Ingliz tili", "Nemis tili", "Rus tili", "Turk tili", "Matematika", "Fizika", "Kimyo", "Biologiya", "Adabiyot", "Ona tili"]
     if any(x.lower() in text.lower() for x in subjects):
         if context.user_data.get("mode") == "quiz_select":
             import asyncio
@@ -770,12 +515,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             return
 
         context.user_data.update({"subject": text, "history": [], "mode": "normal"})
-        await update.message.reply_text(f"✅ {text} tanlandi. Savolingizni yozib yuboring!")
+        await update.message.reply_text(f"✅ {text} tanlandi. Savolingizni yozing yoki rasmini yuboring!")
         return
 
     subject = context.user_data.get("subject")
-    mode = context.user_data.get("mode", "normal")
-    if not subject and mode not in ["writing", "speaking"]:
+    if not subject and context.user_data.get("mode") != "writing":
         await update.message.reply_text("⚠️ Iltimos, avval menyudan birorta bo'limni tanlang.")
         return
 
@@ -783,90 +527,61 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("⏳ O'ylayapman...")
     history = context.user_data.get("history", [])
 
-    if mode == "writing":
-        topic = context.user_data.get("writing_topic", "")
-        system = f"{WRITING_SYSTEM}\nMavzu: {topic}"
-        answer = await asyncio.get_running_loop().run_in_executor(None, lambda: ask_ai(text, "Writing", history, system_override=system))
-    else:
-        answer = await asyncio.get_running_loop().run_in_executor(None, lambda: ask_ai(text, subject, history))
-
+    answer = await asyncio.get_running_loop().run_in_executor(None, lambda: ask_ai(text, subject or "Writing", history))
     history.append({"role": "user", "content": text})
     history.append({"role": "assistant", "content": answer})
     context.user_data["history"] = history[-20:]
 
-    # Statistikani yangilash
     stats = load_stats(update.effective_chat.id)
     stats["total"] += 1
-    if subject: stats["subjects"][subject] = stats["subjects"].get(subject, 0) + 1
     save_stats(update.effective_chat.id, stats)
 
     await update.message.reply_text(answer)
 
-# ======================================================
-# QUIZ HANDLERS
-# ======================================================
 async def send_quiz_question(update: Update, context: ContextTypes.DEFAULT_TYPE):
     questions = context.user_data["quiz_questions"]
     index = context.user_data["quiz_index"]
     q = questions[index]
-    options_text = "\n".join([f"{k}) {v}" for k, v in q["options"].items()])
-    await update.message.reply_text(
-        f"📝 Savol {index + 1}/{len(questions)}\n\n{q['question']}\n\n{options_text}",
-        reply_markup=ReplyKeyboardMarkup([["A", "B", "C", "D"], ["🚪 Testdan chiqish"]], resize_keyboard=True)
-    )
+    opts = "\n".join([f"{k}) {v}" for k, v in q["options"].items()])
+    await update.message.reply_text(f"📝 Savol {index + 1}/{len(questions)}\n\n{q['question']}\n\n{opts}", reply_markup=ReplyKeyboardMarkup([["A", "B", "C", "D"], ["🚪 Testdan chiqish"]], resize_keyboard=True))
 
 async def handle_quiz_answer(update: Update, context: ContextTypes.DEFAULT_TYPE, text: str):
     if text == "🚪 Testdan chiqish":
         context.user_data["quiz_active"] = False
-        await update.message.reply_text("🏁 Test to'xtatildi.", reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True))
+        await start(update, context)
         return
-
     ans = text.strip().upper()
-    if ans not in ["A", "B", "C", "D"]:
-        await update.message.reply_text("⚠️ Faqat A, B, C yoki D variantini bosing.")
-        return
-
+    if ans not in ["A", "B", "C", "D"]: return
     questions = context.user_data["quiz_questions"]
     index = context.user_data["quiz_index"]
     q = questions[index]
 
     if ans == q["answer"]:
         context.user_data["quiz_score"] += 1
-        await update.message.reply_text(f"✅ To'g'ri! 🎉\n\n💡 Izoh: {q['explanation']}")
+        await update.message.reply_text(f"✅ To'g'ri!\n\n💡 Izoh: {q['explanation']}")
     else:
         await update.message.reply_text(f"❌ Noto'g'ri. To'g'ri javob: {q['answer']}\n\n💡 Izoh: {q['explanation']}")
 
     context.user_data["quiz_index"] += 1
     if context.user_data["quiz_index"] >= len(questions):
-        score = context.user_data["quiz_score"]
+        await update.message.reply_text(f"🏁 Test tugadi. Natija: {context.user_data['quiz_score']}/{len(questions)}", reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True))
         context.user_data["quiz_active"] = False
-        await update.message.reply_text(f"🏁 Test yakunlandi! Natijangiz: {score}/{len(questions)}", reply_markup=ReplyKeyboardMarkup(main_menu, resize_keyboard=True))
     else:
         await send_quiz_question(update, context)
 
 async def error_handler(update, context: ContextTypes.DEFAULT_TYPE):
-    print(f"❌ Xatolik yuz berdi: {context.error}")
+    print(f"❌ Xato: {context.error}")
 
-# ======================================================
-# MAIN FUNCTION
-# ======================================================
 def main():
-    if not BOT_TOKEN or not GROQ_API_KEY:
-        print("❌ Tokenlar topilmadi. Atrof-muhit o'zgaruvchilarini tekshiring.")
-        return
-
+    if not BOT_TOKEN or not GROQ_API_KEY: return
     threading.Thread(target=run_health_server, daemon=True).start()
     threading.Thread(target=run_self_ping, daemon=True).start()
-    print("✅ Keep-alive server yoqildi.")
 
     app = ApplicationBuilder().token(BOT_TOKEN).build()
 
-    # TUZATISH: JobQueue mavjudligi xavfsiz tekshiriladi
     if app.job_queue:
         app.job_queue.run_daily(send_daily_word, time=datetime.time(hour=3, minute=0))
-        print("✅ Kunlik vazifa (JobQueue) yuklandi.")
-    else:
-        print("⚠️ Ogohlantirish: JobQueue o'rnatilmagan (bepul hosting cheklovi bo'lishi mumkin).")
+        print("✅ JobQueue yuklandi.")
 
     app.add_error_handler(error_handler)
     app.add_handler(CommandHandler("start", start))
@@ -879,12 +594,10 @@ def main():
     app.add_handler(CommandHandler("admin", admin_cmd))
     app.add_handler(CommandHandler("broadcast", broadcast_cmd))
     app.add_handler(CommandHandler("reboot", reboot_cmd))
-    
     app.add_handler(MessageHandler(filters.PHOTO, photo_handler))
     app.add_handler(MessageHandler(filters.Document.PDF, document_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
 
-    print("🚀 Bot muvaffaqiyatli ishga tushdi!")
     app.run_polling(drop_pending_updates=True)
 
 if __name__ == "__main__":
